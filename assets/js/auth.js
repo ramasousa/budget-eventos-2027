@@ -20,8 +20,13 @@ const Auth = (() => {
   let sessao = null;
   let ouvintes = [];
 
-  const configurado = () =>
-    typeof SUPABASE !== 'undefined' && SUPABASE.url && SUPABASE.key;
+  /* Se config.js não carregou, `const SUPABASE` fica na zona morta e o próprio
+     `typeof` lança. Sem isso um erro de rede no config derruba a página toda. */
+  function cfg() {
+    try { return typeof SUPABASE !== 'undefined' ? SUPABASE : null; }
+    catch (e) { return null; }
+  }
+  const configurado = () => { const c = cfg(); return !!(c && c.url && c.key); };
 
   const avisar = () => ouvintes.forEach(fn => {
     try { fn(estado()); } catch (e) { console.error('[auth] ouvinte falhou:', e); }
@@ -47,11 +52,13 @@ const Auth = (() => {
   const expirado = s => !s || !s.expires_at || (s.expires_at - MARGEM_S) * 1000 < Date.now();
 
   async function chamar(caminho, corpo, cabecalhosExtra) {
-    const res = await fetch(SUPABASE.url + '/auth/v1/' + caminho, {
+    const c = cfg();
+    if (!c) throw new Error('auth-nao-configurado');
+    const res = await fetch(c.url + '/auth/v1/' + caminho, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: SUPABASE.key,
+        apikey: c.key,
         ...(cabecalhosExtra || {}),
       },
       body: corpo ? JSON.stringify(corpo) : undefined,

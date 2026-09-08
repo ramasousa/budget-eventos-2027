@@ -17,15 +17,22 @@ const Capa = (() => {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const plural = (n, s1, s2) => `${n} ${n === 1 ? s1 : s2}`;
 
-  const configurado = () =>
-    typeof SUPABASE !== 'undefined' && SUPABASE.url && SUPABASE.key;
+  /* Config ausente: `typeof` sobre um const na zona morta lança. A capa
+     precisa continuar de pé mesmo assim — ela é a porta de entrada. */
+  function cfg() {
+    try { return typeof SUPABASE !== 'undefined' ? SUPABASE : null; }
+    catch (e) { return null; }
+  }
+  const configurado = () => { const c = cfg(); return !!(c && c.url && c.key); };
 
   async function rest(path) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 12000);
     try {
-      const res = await fetch(SUPABASE.url + '/rest/v1/' + path, {
-        headers: { apikey: SUPABASE.key, Authorization: 'Bearer ' + SUPABASE.key },
+      const c = cfg();
+      if (!c) throw new Error('sem-config');
+      const res = await fetch(c.url + '/rest/v1/' + path, {
+        headers: { apikey: c.key, Authorization: 'Bearer ' + c.key },
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);

@@ -47,7 +47,7 @@ async function autenticar(pg, s) {
   // config.js apontado para o mock local
   await page.route('**/assets/js/config.js', route => route.fulfill({
     contentType: 'application/javascript',
-    body: "const SUPABASE={url:`${A.API}`,key:'chave-de-teste',prefix:'eventos2027_'};",
+    body: A.CONFIG_MOCK,
   }));
   await A.autenticar(page, SESSAO);
   await page.goto(`${A.WEB}/app.html`, { waitUntil: 'networkidle' });

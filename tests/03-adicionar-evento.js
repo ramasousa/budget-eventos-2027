@@ -35,7 +35,7 @@ async function autenticar(pg, s) {
   const pedidos = [];
   p.on('request', r => pedidos.push(r.url()));
   await p.route('**/assets/js/config.js', r => r.fulfill({ contentType: 'application/javascript',
-    body: "const SUPABASE={url:`${A.API}`,key:'k',prefix:'eventos2027_'};" }));
+    body: A.CONFIG_MOCK }));
   await A.autenticar(p, SESSAO);
   await p.goto(`${A.WEB}/app.html`, { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(1200);

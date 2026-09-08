@@ -23,7 +23,7 @@ async function autenticar(pg, s) {
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   await p.route('**/assets/js/config.js', r => r.fulfill({ contentType: 'application/javascript',
-    body: "const SUPABASE={url:`${A.API}`,key:'k',prefix:'eventos2027_'};" }));
+    body: A.CONFIG_MOCK }));
 
   let respostaPrompt = '';
   p.on('dialog', d => d.type() === 'prompt' ? d.accept(respostaPrompt) : d.accept());

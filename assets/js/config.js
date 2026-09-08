@@ -5,8 +5,13 @@
    front-end e está protegida por Row Level Security. Não é a service_role
    key; essa nunca deve entrar neste repositório.
 
-   Modelo de acesso vigente: leitura e escrita liberadas para quem tem o link.
-   Para restringir depois, basta trocar as policies em supabase/schema.sql.
+   Modelo de acesso: leitura pública, escrita só para quem entra com conta.
+   O portão real é a RLS — ver supabase/migracoes/01-fechar-escrita.sql.
+
+   Se este arquivo não carregar, as páginas caem em modo local em vez de
+   quebrar: o `const SUPABASE` fica na zona morta e nem `typeof` pode ler,
+   então store.js, auth.js e capa.js acessam a config por dentro de um
+   try/catch.
    ────────────────────────────────────────────────────────────────────────── */
 
 const SUPABASE = {

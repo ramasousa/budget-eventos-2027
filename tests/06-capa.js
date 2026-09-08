@@ -3,7 +3,7 @@ const { chromium } = A.carregarPlaywright();
 const OUT = A.SAIDA;
 const res = [];
 const check = (n, c, e = '') => { res.push(!!c); console.log((c ? '  PASS  ' : '  FALHA ') + n + (e ? '  → ' + e : '')); };
-const CFG = "const SUPABASE={url:`${A.API}`,key:'k',prefix:'eventos2027_'};";
+const CFG = A.CONFIG_MOCK;
 
 
 async function autenticar(pg, s) {

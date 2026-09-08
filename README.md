@@ -188,10 +188,16 @@ porta a mais é superfície de ataque. As contas são criadas no painel.
 A **ordem importa**. Fechar as policies antes de publicar o site tira a edição
 de quem estiver com a versão antiga aberta.
 
-1. **Criar as contas** — Supabase → Authentication → Users → *Add user*, com
-   *Auto Confirm User* ligado. Uma por pessoa que edita.
+1. ~~**Criar as contas**~~ — feito: cinco contas `@bradesco.com.br`, já
+   confirmadas, com uma senha compartilhada provisória. Senha compartilhada é
+   provisória de verdade: enquanto ela valer, a autoria registrada no banco
+   diz apenas qual conta gravou, não quem digitou. Cada pessoa deve trocar a
+   sua (Authentication → Users → *Reset password*) antes de o número virar
+   decisão orçamentária.
 2. **Desligar o cadastro aberto** — Authentication → Providers → Email →
-   *Allow new users to sign up* = **off**.
+   *Allow new users to sign up* = **off**. Sem isso o portão não vale nada:
+   qualquer pessoa com a chave publishable — que está no código-fonte da
+   página, por definição — cria a própria conta e passa a escrever.
 3. **Publicar o site** com esta versão (merge na `main`).
 4. **Rodar** [`supabase/migracoes/01-fechar-escrita.sql`](supabase/migracoes/01-fechar-escrita.sql).
 
@@ -289,7 +295,7 @@ atrapalham em paralelo — e derruba tudo no fim.
 | Suíte | O que cobre |
 |---|---|
 | `01-orcamento` | catálogo, filtros, cálculo, mapa, calendário, consolidado, exportações |
-| `02-modos-degradados` | sem geometria, sem biblioteca, sem banco, e duas pessoas editando |
+| `02-modos-degradados` | sem geometria, sem biblioteca, sem banco, sem `config.js`, e duas pessoas editando |
 | `03-adicionar-evento` | formulário, autocomplete de cidades, evento sem sede, remoção |
 | `04-cenarios` | salvar, carregar e excluir cenários |
 | `05-rede-de-seguranca` | executa o ataque de apagamento e verifica a recuperação |
@@ -319,6 +325,8 @@ Cada uma corresponde a um bug que **já aconteceu**:
 - uma regra `container > *` jogava os decorativos no fluxo e empurrava o hero
   1.540px para baixo
 - a capa e a ferramenta mostrando totais diferentes
+- `config.js` falhando ao carregar deixava as duas páginas **em branco**:
+  `const SUPABASE` fica na zona morta e até `typeof SUPABASE` lança
 - qualquer requisição externa reaparecendo
 
 ## Estrutura

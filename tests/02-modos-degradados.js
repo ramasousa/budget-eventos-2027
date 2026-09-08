@@ -4,7 +4,7 @@ const OUT = A.SAIDA;
 const results = [];
 const check = (n, c, e = '') => { results.push({ n, c: !!c }); console.log((c ? '  PASS  ' : '  FALHA ') + n + (e ? '  → ' + e : '')); };
 
-const CFG_MOCK = "const SUPABASE={url:`${A.API}`,key:'chave-de-teste',prefix:'eventos2027_'};";
+const CFG_MOCK = A.CONFIG_MOCK;
 
 
 async function autenticar(pg, s) {
@@ -181,6 +181,55 @@ async function autenticar(pg, s) {
   check('mudança de participantes propaga de volta',
     (await raul.locator('#railTotal').textContent()) === parTotal2,
     `Par=${parTotal2} | Raul=${await raul.locator('#railTotal').textContent()}`);
+
+  /* ══ CENÁRIO D — config.js não carrega ════════════════════════════════
+     Proxy corporativo, 404 num deploy pela metade, erro de sintaxe: o
+     config é o primeiro script da página. Ele quebrou de verdade durante o
+     desenvolvimento e a página inteira ficou em branco — porque `const
+     SUPABASE` fica na zona morta e até `typeof SUPABASE` lança. A partir
+     daqui, config quebrado significa modo local, não tela vazia. */
+  console.log('\nD) config.js quebrado');
+  const ctxD = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const d = await ctxD.newPage();
+  const errD = [];
+  d.on('pageerror', e => errD.push(e.message));
+  await d.route('**/assets/js/config.js', r => r.fulfill({
+    contentType: 'application/javascript',
+    body: 'const SUPABASE = { url: NAO_EXISTE, key: 1 };',   // lança na avaliação
+  }));
+  await d.goto(`${A.WEB}/app.html`, { waitUntil: 'domcontentloaded' });
+  await d.waitForTimeout(1200);
+  check('catálogo continua de pé com config quebrado',
+    await d.locator('.event-card').count() === 24,
+    'cards=' + await d.locator('.event-card').count());
+  check('diz que está em modo local',
+    /Modo local/.test(await d.locator('#syncText').textContent()),
+    (await d.locator('#syncText').textContent()).slice(0, 60));
+  check('seleção ainda funciona sem banco',
+    await (async () => {
+      await d.locator('.event-card[data-id="sff"] .card-body').click();
+      await d.waitForTimeout(300);
+      return (await d.locator('#railEvents').textContent()) === '1';
+    })(), await d.locator('#railEvents').textContent());
+  check('o único erro é o do próprio config, e ele não se propaga',
+    errD.every(m => /NAO_EXISTE/.test(m)), errD.join(' | '));
+
+  // a capa também é porta de entrada: não pode ficar em branco
+  const dc = await ctxD.newPage();
+  const errDC = [];
+  dc.on('pageerror', e => errDC.push(e.message));
+  await dc.route('**/assets/js/config.js', r => r.fulfill({
+    contentType: 'application/javascript',
+    body: 'const SUPABASE = { url: NAO_EXISTE, key: 1 };',
+  }));
+  await dc.goto(`${A.WEB}/`, { waitUntil: 'domcontentloaded' });
+  await dc.waitForTimeout(1500);
+  check('capa continua de pé com config quebrado',
+    await dc.locator('#heroNumero').count() === 1 &&
+    (await dc.locator('#heroNumero').textContent()).trim().length > 0,
+    (await dc.locator('#heroNumero').textContent()).trim());
+  check('capa não propaga o erro do config',
+    errDC.every(m => /NAO_EXISTE/.test(m)), errDC.join(' | '));
 
   await browser.close();
   const f = results.filter(r => !r.c);

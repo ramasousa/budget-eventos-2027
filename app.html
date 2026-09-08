@@ -676,7 +676,9 @@
       // Mensagem genérica de propósito: não confirmamos se o e-mail existe.
       mostrarErro(err.status === 400 || err.status === 401
         ? 'E-mail ou senha incorretos.'
-        : 'Não foi possível entrar: ' + err.message);
+        : err.message === 'auth-nao-configurado'
+          ? 'Esta página está em modo local (sem banco). Não há login a fazer.'
+          : 'Não foi possível entrar: ' + err.message);
     } finally {
       btn.disabled = false; btn.textContent = 'Entrar';
     }

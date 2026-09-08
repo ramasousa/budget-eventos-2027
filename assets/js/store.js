@@ -47,6 +47,9 @@ const Store = (() => {
   let aoNegar = null;
   let aoPerderSessao = null;
   function podeEscrever() {
+    // Sem banco (config ausente) não há nada a proteger: o plano vive só neste
+    // navegador. Travar aqui transformaria uma falha de rede em página inútil.
+    if (!configured()) return true;
     if (typeof Auth === 'undefined' || Auth.autenticado()) return true;
     if (aoNegar) aoNegar();
     return false;
@@ -61,9 +64,19 @@ const Store = (() => {
   });
   const emit = () => notify(listeners);
   const emitStatus = () => notify(statusListeners);
-  const configured = () =>
-    typeof SUPABASE !== 'undefined' && SUPABASE.url && SUPABASE.key &&
-    !SUPABASE.url.includes('SUA_URL');
+  /* config.js pode não ter carregado — bloqueio de rede, proxy corporativo,
+     erro de sintaxe. Nesse caso o `const SUPABASE` fica na zona morta e até
+     `typeof` lança ReferenceError, derrubando o render inteiro. Por isso a
+     leitura da config passa por aqui: sem banco a página degrada para o
+     catálogo embutido, ela não fica em branco. */
+  function cfg() {
+    try { return typeof SUPABASE !== 'undefined' ? SUPABASE : null; }
+    catch (e) { return null; }
+  }
+  const configured = () => {
+    const c = cfg();
+    return !!(c && c.url && c.key && !c.url.includes('SUA_URL'));
+  };
 
   function author() {
     // Autenticado: a autoria é o e-mail da sessão — e o banco recusa gravar
@@ -93,15 +106,16 @@ const Store = (() => {
   /* ─── REST ─────────────────────────────────────────────────────────────── */
   async function rest(method, path, body, extraPrefer) {
     if (!configured()) throw new Error('supabase-nao-configurado');
+    const c = cfg();
     // Ler é público (chave publishable). Escrever usa o token da sessão —
     // é o token que a RLS enxerga como authenticated.
-    let bearer = SUPABASE.key;
+    let bearer = c.key;
     if (method !== 'GET' && typeof Auth !== 'undefined') {
       const t = await Auth.token();
       if (t) bearer = t;
     }
     const headers = {
-      apikey: SUPABASE.key,
+      apikey: c.key,
       Authorization: 'Bearer ' + bearer,
     };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -112,7 +126,7 @@ const Store = (() => {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 12000);
     try {
-      const res = await fetch(SUPABASE.url + '/rest/v1/' + path, {
+      const res = await fetch(c.url + '/rest/v1/' + path, {
         method, headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: ctrl.signal,
