@@ -21,6 +21,10 @@ const EventMap = (() => {
   let mode = 'plano';
   let booted = false;
   let failed = false;
+  let motivo = 'lib';          // 'lib' | 'tiles'
+  let pendente = false;        // redesenho adiado por aba oculta
+  let tilesOk = false;
+  let tileErros = 0;
 
   const PESO_PRIORIDADE = { alta: 1.0, media: 0.62, baixa: 0.34 };
 
@@ -55,42 +59,71 @@ const EventMap = (() => {
   }
 
   /* ─── construção ─────────────────────────────────────────────────────── */
+  function degradar(porque) {
+    if (failed) return;
+    failed = true;
+    motivo = porque;
+    if (map) { map.remove(); map = null; booted = false; }
+    document.getElementById('mapFallback').classList.add('show');
+    document.querySelectorAll('.map-overlay').forEach(o => o.style.display = 'none');
+    renderFallback();
+  }
+
   function ensure() {
-    if (booted || failed) { refresh(); return; }
-    if (!available()) {
-      failed = true;
-      document.getElementById('mapFallback').classList.add('show');
-      document.querySelectorAll('.map-overlay').forEach(o => o.style.display = 'none');
-      renderFallback();
+    if (failed) { renderFallback(); return; }
+    if (booted) {
+      if (map) map.invalidateSize();
+      refresh();
       return;
     }
+    if (!available()) { degradar('lib'); return; }
     booted = true;
 
     map = L.map('map', {
       worldCopyJump: true,
       minZoom: 1.4,
       maxZoom: 8,
-      zoomControl: true,
-      attributionControl: true,
+      zoomControl: false,      // reposicionado abaixo: no topo colide com o
+      attributionControl: true, // painel "Leitura do mapa"
       scrollWheelZoom: true,
     }).setView([28, -15], 2.2);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 18,
-    }).addTo(map);
+    });
+    tiles.on('tileload', () => { tilesOk = true; });
+    tiles.on('tileerror', () => {
+      tileErros += 1;
+      // Marcadores sobre um fundo vazio não dizem nada a quem lê. Se o
+      // servidor de tiles não responder, o modo autônomo informa mais.
+      if (!tilesOk && tileErros >= 4) degradar('tiles');
+    });
+    tiles.addTo(map);
 
     markerLayer = L.layerGroup().addTo(map);
     // O mapa nasce escondido dentro da aba; precisa remedir ao aparecer.
-    setTimeout(() => map.invalidateSize(), 60);
+    // A falha de tiles pode derrubar o mapa antes deste timer disparar.
+    setTimeout(() => { if (map) map.invalidateSize(); }, 60);
     refresh();
   }
 
   /* ─── desenho ────────────────────────────────────────────────────────── */
+  function visivel() {
+    const el = document.getElementById('map');
+    return !!el && el.offsetWidth > 0 && el.offsetHeight > 0;
+  }
+
   function refresh() {
     if (failed) { renderFallback(); return; }
     if (!booted || !map) return;
+    // Aba oculta: o contêiner tem tamanho zero e a camada de calor quebra ao
+    // redesenhar. Adiamos para quando a aba voltar a aparecer.
+    if (!visivel()) { pendente = true; return; }
+    pendente = false;
     const list = cities();
 
     const valorDe = c => mode === 'plano' ? c.investimento : c.peso;
@@ -254,9 +287,10 @@ const EventMap = (() => {
       <div class="fb-wrap">
         <div class="fb-head">
           <div class="fb-title">Concentração geográfica</div>
-          <div class="fb-sub">O mapa interativo depende de bibliotecas externas que esta rede
-            bloqueou. Abaixo, a mesma leitura em modo autônomo — clique numa praça para ver
-            e selecionar os eventos dela.</div>
+          <div class="fb-sub">${motivo === 'tiles'
+            ? 'O servidor de mapas (CARTO) não respondeu — provavelmente bloqueado por esta rede. Sobre um fundo vazio os pontos não diriam nada, então abaixo vai a mesma leitura em modo autônomo.'
+            : 'A biblioteca de mapas não pôde ser carregada. Abaixo, a mesma leitura em modo autônomo.'}
+            Clique numa praça para ver e selecionar os eventos dela.</div>
         </div>
         <div class="fb-modes">
           <button class="map-mode ${mode === 'plano' ? 'active' : ''}" data-mapmode="plano">Nosso plano</button>
@@ -301,5 +335,6 @@ const EventMap = (() => {
     if (map) map.closePopup();
   });
 
-  return { ensure, refresh, setMode, renderFallback, get mode() { return mode; } };
+  return { ensure, refresh, setMode, renderFallback, degradar,
+           get mode() { return mode; }, get degradado() { return failed; } };
 })();

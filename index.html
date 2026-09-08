@@ -7,8 +7,7 @@
 <meta name="description" content="Orçamento colaborativo de eventos internacionais de tecnologia 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
 <meta name="color-scheme" content="light">
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-      crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111'/><circle cx='16' cy='16' r='6' fill='%23990000'/></svg>">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
@@ -231,10 +230,10 @@
 <div class="toast" id="toast"></div>
 
 <!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Leaflet servido do próprio repositório: sem CDN, sem SRI para manter,
+     e o mapa continua funcionando em rede que bloqueia domínios externos. -->
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/vendor/leaflet/leaflet-heat.js"></script>
 
 <script src="assets/js/config.js"></script>
 <script src="assets/js/data.js"></script>

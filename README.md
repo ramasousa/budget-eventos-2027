@@ -69,9 +69,11 @@ A página foi construída para degradar sem quebrar:
 - **Supabase inacessível** → assume o espelho em `localStorage` e, se não
   houver, o catálogo embarcado em `assets/js/data.js`. O indicador fica
   vermelho e avisa. Tudo continua funcionando, só não compartilha.
-- **CDN do mapa bloqueado** (comum em rede corporativa) → a aba Mapa entrega a
-  mesma leitura de concentração geográfica em HTML puro, sem dependência
-  externa, com seleção de eventos preservada.
+- **Servidor de mapas inacessível** → o Leaflet é servido pelo próprio
+  repositório, então a biblioteca nunca falta; o que pode ser bloqueado é o
+  servidor de tiles (CARTO). Se ele não responder, a aba Mapa não deixa
+  bolinhas soltas num fundo vazio: cai para a leitura de concentração
+  geográfica em HTML puro, com a seleção de eventos preservada.
 
 ### Segurança
 
@@ -84,10 +86,12 @@ consciente: não há dado sensível, apenas estimativas de custo de eventos
 públicos. Para restringir, altere as policies em [`supabase/schema.sql`](supabase/schema.sql)
 e reaplique.
 
-Os scripts do Leaflet são carregados do cdnjs **sem atributo `integrity`**,
-porque as hashes não puderam ser verificadas no ambiente onde o projeto foi
-montado — e embarcar hash não verificada quebraria o mapa de vez. Para
-endurecer, veja [Hardening opcional](#hardening-opcional).
+**Leaflet 1.9.4 e leaflet.heat 0.2.0 são servidos pelo próprio repositório**
+(`assets/vendor/leaflet/`, ~210 KB, licenças BSD incluídas). Não há CDN de
+terceiros, nem hash SRI para manter, nem script externo executando na página.
+
+Sobra uma única dependência de rede: os **tiles** do mapa, que vêm do CARTO.
+Ver [Dependência de tiles](#dependência-de-tiles).
 
 ---
 
@@ -156,27 +160,33 @@ assets/js/data.js          catálogo embarcado (fallback offline)
 assets/js/store.js         persistência, sincronização e cenários
 assets/js/app.js           cálculo de custo, views e exportações
 assets/js/map.js           mapa de calor + modo autônomo
+assets/vendor/leaflet/     Leaflet 1.9.4 + leaflet.heat (BSD, servidos localmente)
 supabase/schema.sql        tabelas, RLS e policies
 ```
 
-Sem build, sem dependências de pacote. Abrir o `index.html` num servidor
+Sem build, sem `node_modules`, sem CDN. Abrir o `index.html` num servidor
 estático já funciona.
 
 ---
 
-## Hardening opcional
+## Dependência de tiles
 
-Adicionar SRI ao Leaflet, a partir de uma máquina com acesso ao cdnjs:
+O desenho do mundo (as "tiles") vem de `basemaps.cartocdn.com`. É a única
+chamada externa que a página faz depois de carregar. Se o domínio estiver
+liberado, você vê o mapa completo; se não, a aba degrada sozinha para a
+leitura em HTML puro e ninguém fica travado.
+
+Para eliminar também essa dependência, há dois caminhos:
+
+- **Liberar o domínio** `*.basemaps.cartocdn.com` na rede — o mais simples.
+- **Servir tiles próprios**: aponte a URL em `assets/js/map.js`
+  (`L.tileLayer(...)`) para um servidor interno de tiles. O resto do código
+  não muda.
+
+Atualizar o Leaflet, quando for o caso:
 
 ```bash
-for f in leaflet/1.9.4/leaflet.min.js leaflet/1.9.4/leaflet.min.css; do
-  curl -s "https://cdnjs.cloudflare.com/ajax/libs/$f" \
-    | openssl dgst -sha384 -binary | openssl base64 -A | sed "s|^|$f  sha384-|"
-  echo
-done
+npm pack leaflet@<versão> leaflet.heat@<versão>
+# extraia dist/leaflet.js, dist/leaflet.css, dist/images/ e dist/leaflet-heat.js
+# para assets/vendor/leaflet/
 ```
-
-Cole cada hash como `integrity="sha384-…"` na tag correspondente do
-`index.html`. Alternativa mais robusta para rede de banco: baixar Leaflet e
-`leaflet.heat` para `assets/vendor/` e servir do próprio repositório,
-eliminando a dependência de CDN.

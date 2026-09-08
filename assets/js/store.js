@@ -38,8 +38,14 @@ const Store = (() => {
   let pendingOps = new Map();                    // dedupe por chave
 
   /* ─── util ─────────────────────────────────────────────────────────────── */
-  const emit = () => listeners.forEach(fn => fn(state));
-  const emitStatus = () => statusListeners.forEach(fn => fn(state));
+  // Um listener que falhe não pode derrubar quem disparou a mudança: o
+  // estado já mudou e o resto da operação (fechar um modal, avisar o
+  // usuário) precisa acontecer de qualquer jeito.
+  const notify = (fns) => fns.forEach(fn => {
+    try { fn(state); } catch (e) { console.error('[store] listener falhou:', e); }
+  });
+  const emit = () => notify(listeners);
+  const emitStatus = () => notify(statusListeners);
   const configured = () =>
     typeof SUPABASE !== 'undefined' && SUPABASE.url && SUPABASE.key &&
     !SUPABASE.url.includes('SUA_URL');
