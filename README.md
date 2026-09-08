@@ -198,8 +198,21 @@ de quem estiver com a versão antiga aberta.
    *Allow new users to sign up* = **off**. Sem isso o portão não vale nada:
    qualquer pessoa com a chave publishable — que está no código-fonte da
    página, por definição — cria a própria conta e passa a escrever.
-3. **Publicar o site** com esta versão (merge na `main`).
-4. **Rodar** [`supabase/migracoes/01-fechar-escrita.sql`](supabase/migracoes/01-fechar-escrita.sql).
+3. ~~**Publicar o site**~~ — feito: a `main` já carrega a versão com login.
+4. ~~**Rodar** [`supabase/migracoes/01-fechar-escrita.sql`](supabase/migracoes/01-fechar-escrita.sql)~~
+   — feito. Conferido no banco, com o papel trocado na marra:
+
+   | Tentativa | Resultado |
+   |---|---|
+   | `anon` insere no plano | recusado (`42501`) |
+   | `anon` apaga o plano inteiro | não apaga nada — a linha continua lá |
+   | `anon` altera participantes | não altera nada |
+   | autenticado escreve | grava, e a autoria vem do token |
+   | autenticado assina como outra pessoa | recusado (`42501`) |
+
+   `DELETE` e `UPDATE` de `anon` não devolvem erro: a RLS simplesmente não
+   enxerga linha nenhuma para eles, então a operação acerta zero registros.
+   Silencioso, mas inofensivo — e o `INSERT`, esse falha alto.
 
 Se travar: [`supabase/migracoes/01-rollback.sql`](supabase/migracoes/01-rollback.sql)
 devolve a escrita aberta em 30 segundos. A rede de segurança dos snapshots
