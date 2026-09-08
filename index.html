@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Eventos Internacionais 2027 — Open Platform &amp; BaaS</title>
+<meta name="description" content="Orçamento colaborativo de eventos internacionais de tecnologia 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
+<meta name="color-scheme" content="light">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+      crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111'/><circle cx='16' cy='16' r='6' fill='%23990000'/></svg>">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<!-- ─── TOPBAR ────────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="brand-dot"></span>
+    <span class="brand-name">Banco Bradesco</span>
+    <span class="brand-sep">/</span>
+    <span class="brand-area">Open Platform &amp; BaaS — BU AI First</span>
+  </div>
+  <span class="topbar-year">Planejamento Orçamentário 2027</span>
+</header>
+
+<!-- ─── BARRA DE SINCRONIZAÇÃO ────────────────────────────────────────────── -->
+<div class="syncbar">
+  <span class="sync-dot" id="syncDot"></span>
+  <span class="sync-text" id="syncText">Carregando…</span>
+  <span class="sync-spacer"></span>
+  <input type="text" class="ghost-input" id="authorInput" placeholder="Seu nome" style="width:120px" aria-label="Seu nome">
+  <button class="ghost-btn primary" id="btnSaveScenario">Salvar cenário</button>
+  <button class="ghost-btn" id="btnScenarios">Cenários</button>
+  <button class="ghost-btn" id="btnPremissas">Premissas</button>
+</div>
+
+<!-- ─── ABAS ──────────────────────────────────────────────────────────────── -->
+<nav class="tabs">
+  <button class="tab active" data-tab="catalogo">Catálogo<span class="tab-badge" id="tabCountCatalogo">0</span></button>
+  <button class="tab" data-tab="mapa">Mapa de calor</button>
+  <button class="tab" data-tab="calendario">Calendário 2027</button>
+  <button class="tab" data-tab="consolidado">Consolidado<span class="tab-badge" id="tabCountSel" style="display:none">0</span></button>
+</nav>
+
+<div class="layout">
+  <main class="main">
+
+    <!-- ─── VIEW: CATÁLOGO ─────────────────────────────────────────────── -->
+    <section class="view active" id="view-catalogo">
+      <div class="view-head">
+        <h1 class="view-title">Eventos Internacionais 2027</h1>
+        <p class="view-sub">
+          Selecione os eventos e defina o número de participantes. O orçamento é atualizado
+          em tempo real e fica visível para todos que abrirem esta página.
+        </p>
+      </div>
+
+      <div class="toolbar" id="catFilters"></div>
+      <div class="toolbar">
+        <span style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:700">Prioridade</span>
+        <span id="prioFilters" style="display:contents"></span>
+        <span class="toolbar-sep"></span>
+        <input type="search" class="search" id="searchInput" placeholder="Buscar evento, cidade, tema…" aria-label="Buscar">
+        <button class="chip" id="btnOnlySelected">Só selecionados</button>
+        <span class="toolbar-note" id="fxNote"></span>
+      </div>
+
+      <div class="events-grid" id="eventsGrid"></div>
+    </section>
+
+    <!-- ─── VIEW: MAPA ─────────────────────────────────────────────────── -->
+    <section class="view flush" id="view-mapa">
+      <div class="map-wrap">
+        <div id="map"></div>
+
+        <div class="map-fallback" id="mapFallback"></div>
+
+        <div class="map-overlay map-topleft">
+          <div class="map-panel">
+            <div class="map-h">Leitura do mapa</div>
+            <div class="map-modes">
+              <button class="map-mode active" data-mapmode="plano">Nosso plano</button>
+              <button class="map-mode" data-mapmode="mercado">Mercado</button>
+            </div>
+            <div class="map-hint" id="mapResumo"></div>
+          </div>
+        </div>
+
+        <div class="map-overlay map-topright">
+          <div class="map-panel">
+            <div class="map-h">Praças por intensidade</div>
+            <div id="mapRanking"></div>
+          </div>
+        </div>
+
+        <div class="map-overlay map-bottomleft">
+          <div class="map-panel">
+            <div class="legend-scale">
+              <span class="legend-t">baixo</span>
+              <span class="legend-grad"></span>
+              <span class="legend-t">alto</span>
+            </div>
+            <div class="legend-cats" id="mapLegendCats"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIEW: CALENDÁRIO ───────────────────────────────────────────── -->
+    <section class="view" id="view-calendario">
+      <div class="view-head">
+        <h1 class="view-title">Calendário e carga de viagem</h1>
+        <p class="view-sub">
+          Distribuição dos eventos ao longo de 2027 e o custo que cada mês carrega.
+          Serve para enxergar concentração de ausências antes de fechar o plano — clique
+          em qualquer evento para incluir ou remover.
+        </p>
+      </div>
+      <div class="tl-months" id="timeline"></div>
+    </section>
+
+    <!-- ─── VIEW: CONSOLIDADO ──────────────────────────────────────────── -->
+    <section class="view" id="view-consolidado">
+      <div class="view-head">
+        <h1 class="view-title">Consolidado do orçamento</h1>
+        <p class="view-sub">
+          Visão para apresentação. Números abertos por frente temática, composição de custo,
+          distribuição geográfica e detalhamento evento a evento.
+        </p>
+      </div>
+      <div id="consolidado"></div>
+    </section>
+
+  </main>
+
+  <!-- ─── RAIL: ORÇAMENTO ──────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="rail-head">
+      <div class="rail-title">Orçamento consolidado</div>
+      <div class="rail-total-k">Total selecionado</div>
+      <div class="rail-total-v" id="railTotal">R$ 0</div>
+      <div class="rail-stats">
+        <div><div class="rail-k">Eventos</div><div class="rail-v" id="railEvents">0</div></div>
+        <div><div class="rail-k">Participações</div><div class="rail-v" id="railPeople">0</div></div>
+        <div><div class="rail-k">Passagens</div><div class="rail-v" id="railPassagens">R$ 0</div></div>
+        <div><div class="rail-k">Inscrições</div><div class="rail-v" id="railInscricoes">R$ 0</div></div>
+      </div>
+    </div>
+
+    <div class="rail-budget">
+      <div class="rail-k" style="margin-bottom:0.35rem">Limite de orçamento definido</div>
+      <div class="rail-budget-row">
+        <span class="rail-prefix">R$</span>
+        <input type="text" class="budget-input" id="budgetInput" inputmode="numeric" aria-label="Limite de orçamento">
+      </div>
+      <div class="bar-wrap"><div class="bar-used" id="railBar"></div></div>
+      <div class="bar-pct" id="railPct">—</div>
+    </div>
+
+    <div class="rail-list" id="railList"></div>
+
+    <div class="rail-foot">
+      <button class="rail-btn" id="btnCSV">Exportar CSV</button>
+      <button class="rail-btn alt" id="btnTXT">Resumo TXT</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ─── MODAL: CENÁRIOS ───────────────────────────────────────────────────── -->
+<div class="overlay" id="modalScenarios">
+  <div class="modal">
+    <div class="modal-title">Cenários salvos</div>
+    <div class="modal-sub">
+      Um cenário é uma fotografia do orçamento: quais eventos, quantas pessoas, qual limite
+      e qual câmbio. Serve para comparar alternativas — “plano cheio” contra “plano enxuto” —
+      sem perder nenhuma das duas. Carregar um cenário substitui o plano compartilhado atual.
+    </div>
+    <div id="scenarioList"></div>
+    <div class="modal-foot">
+      <button class="modal-btn ghost" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: PREMISSAS ──────────────────────────────────────────────────── -->
+<div class="overlay" id="modalPremissas">
+  <div class="modal">
+    <div class="modal-title">Premissas do orçamento</div>
+    <div class="modal-sub">
+      Estes parâmetros valem para todo mundo que abre a página. Alterar o câmbio recalcula
+      as inscrições de todos os eventos na hora.
+    </div>
+
+    <div class="modal-sec">
+      <div class="modal-k">Câmbio aplicado às inscrições (R$)</div>
+      <div class="fx-grid">
+        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">USD</label>
+          <input type="text" class="modal-input" id="fxUSD" inputmode="decimal"></div>
+        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">EUR</label>
+          <input type="text" class="modal-input" id="fxEUR" inputmode="decimal"></div>
+        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">GBP</label>
+          <input type="text" class="modal-input" id="fxGBP" inputmode="decimal"></div>
+      </div>
+    </div>
+
+    <div class="modal-sec">
+      <div class="modal-k">Limite de orçamento da superintendência</div>
+      <input type="text" class="modal-input" id="premBudget" inputmode="numeric">
+    </div>
+
+    <div class="modal-sec">
+      <div class="modal-k">Seu nome — aparece como autor das alterações</div>
+      <input type="text" class="modal-input" id="premAuthor" placeholder="Raul">
+    </div>
+
+    <div class="note-box" style="font-size:0.7rem">
+      Passagens e hospedagem já estão em reais e são estimativas de planejamento.
+      Para ajustar o custo de um evento específico, edite a linha correspondente na tabela
+      <b>eventos2027_events</b> do Supabase — a página lê direto de lá.
+    </div>
+
+    <div class="modal-foot">
+      <button class="modal-btn primary" id="btnSavePremissas">Salvar premissas</button>
+      <button class="modal-btn ghost" data-close>Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/map.js"></script>
+
+<script>
+/* ─── MONTAGEM ────────────────────────────────────────────────────────────── */
+(function boot() {
+
+  /* abas */
+  document.querySelectorAll('.tab').forEach(t =>
+    t.onclick = () => switchTab(t.dataset.tab));
+
+  /* busca e filtros locais */
+  let searchTimer = null;
+  document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { ui.search = e.target.value; renderFilters(); renderCatalog(); }, 160);
+  });
+  const btnOnly = document.getElementById('btnOnlySelected');
+  btnOnly.onclick = () => {
+    ui.onlySelected = !ui.onlySelected;
+    btnOnly.classList.toggle('active', ui.onlySelected);
+    renderCatalog();
+  };
+
+  /* limite de orçamento */
+  const budgetInput = document.getElementById('budgetInput');
+  budgetInput.addEventListener('input', e => Store.setBudget(parseNum(e.target.value)));
+  budgetInput.addEventListener('blur', () => renderRail());
+
+  /* exportações */
+  document.getElementById('btnCSV').onclick = exportCSV;
+  document.getElementById('btnTXT').onclick = exportTXT;
+
+  /* autor */
+  const authorInput = document.getElementById('authorInput');
+  authorInput.value = Store.author() === 'anônimo' ? '' : Store.author();
+  authorInput.addEventListener('change', () => {
+    Store.setAuthor(authorInput.value.trim() || 'anônimo');
+    toast('Nome registrado. Suas próximas alterações aparecem assinadas.');
+  });
+
+  /* modais */
+  const open  = id => document.getElementById(id).classList.add('open');
+  const close = id => document.getElementById(id).classList.remove('open');
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+    ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.classList.remove('open'));
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
+  });
+
+  /* premissas */
+  document.getElementById('btnPremissas').onclick = () => {
+    document.getElementById('fxUSD').value = Store.state.fx.USD;
+    document.getElementById('fxEUR').value = Store.state.fx.EUR;
+    document.getElementById('fxGBP').value = Store.state.fx.GBP;
+    document.getElementById('premBudget').value = Store.state.budgetLimit.toLocaleString('pt-BR');
+    document.getElementById('premAuthor').value = Store.author() === 'anônimo' ? '' : Store.author();
+    open('modalPremissas');
+  };
+  document.getElementById('btnSavePremissas').onclick = () => {
+    const num = id => Number(String(document.getElementById(id).value).replace(',', '.'));
+    const fx = { USD: num('fxUSD'), EUR: num('fxEUR'), GBP: num('fxGBP') };
+    for (const [k, v] of Object.entries(fx)) {
+      if (!(v > 0)) return toast('Câmbio de ' + k + ' inválido.', true);
+    }
+    Store.setFx(fx);
+    Store.setBudget(parseNum(document.getElementById('premBudget').value));
+    const nome = document.getElementById('premAuthor').value.trim();
+    if (nome) { Store.setAuthor(nome); authorInput.value = nome; }
+    close('modalPremissas');
+    toast('Premissas atualizadas para todos.');
+  };
+
+  /* cenários */
+  document.getElementById('btnSaveScenario').onclick = async () => {
+    const t = totals();
+    if (!t.events) return toast('Selecione ao menos um evento antes de salvar.', true);
+    const nome = prompt('Nome do cenário (ex: "Plano enxuto — só prioridade alta")');
+    if (!nome || !nome.trim()) return;
+    try {
+      await Store.saveScenario(nome.trim(), t.total);
+      toast('Cenário "' + nome.trim() + '" salvo e compartilhado.');
+    } catch (e) {
+      toast('Não foi possível salvar no banco. Verifique a conexão.', true);
+    }
+  };
+
+  document.getElementById('btnScenarios').onclick = async () => {
+    const host = document.getElementById('scenarioList');
+    host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Carregando…</div>';
+    open('modalScenarios');
+    let list = [];
+    try { list = await Store.listScenarios(); }
+    catch (e) {
+      host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Não foi possível carregar os cenários (sem conexão com o banco).</div>';
+      return;
+    }
+    if (!list.length) {
+      host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Nenhum cenário salvo ainda.</div>';
+      return;
+    }
+    host.innerHTML = list.map(s => `
+      <div class="scn-row">
+        <div class="scn-name">${esc(s.name)}
+          <div class="scn-meta">${esc(s.author || 'anônimo')} · ${new Date(s.created_at).toLocaleDateString('pt-BR')} · ${Object.keys(s.selections || {}).length} eventos</div>
+        </div>
+        <span class="scn-total">${brl(s.total || 0)}</span>
+        <button class="scn-load" data-load="${esc(s.id)}">Carregar</button>
+      </div>`).join('');
+    host.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
+      const s = list.find(x => x.id === b.dataset.load);
+      if (!s) return;
+      if (!confirm(`Carregar "${s.name}"? Isso substitui o plano compartilhado atual para todos.`)) return;
+      b.textContent = '…';
+      try {
+        await Store.applyScenario(s);
+        close('modalScenarios');
+        toast('Cenário "' + s.name + '" carregado.');
+      } catch (e) {
+        toast('Cenário aplicado localmente, mas houve falha ao propagar.', true);
+      }
+    });
+  };
+
+  /* modos do mapa */
+  document.querySelectorAll('[data-mapmode]').forEach(b =>
+    b.onclick = () => EventMap.setMode(b.dataset.mapmode));
+
+  /* legenda de categorias do mapa */
+  document.getElementById('mapLegendCats').innerHTML = Object.values(CATEGORIES)
+    .map(c => `<span class="legend-cat"><span class="legend-swatch" style="background:${c.color}"></span>${c.label}</span>`)
+    .join('');
+
+  /* nota de câmbio no catálogo */
+  function fxNote() {
+    const f = Store.state.fx;
+    const n = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    document.getElementById('fxNote').textContent =
+      `Câmbio: USD ${n(f.USD)} · EUR ${n(f.EUR)} · GBP ${n(f.GBP)}`;
+  }
+
+  /* liga o store à tela */
+  Store.onChange(() => { render(); fxNote(); });
+  Store.onStatus(renderStatus);
+
+  /* garante gravação das pendências ao sair */
+  window.addEventListener('beforeunload', () => Store.flush());
+
+  Store.init();
+})();
+</script>
+</body>
+</html>
