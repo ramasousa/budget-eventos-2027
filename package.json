@@ -1,0 +1,11 @@
+{
+  "name": "budget-eventos-2027",
+  "private": true,
+  "description": "Orçamento de eventos internacionais 2027 — Open Platform & BaaS. O site é estático e não usa nada daqui em produção; estas dependências existem só para a bateria de testes.",
+  "scripts": {
+    "test": "node tests/rodar.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}

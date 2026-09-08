@@ -274,6 +274,53 @@ Rode [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor do Supabase.
 
 ---
 
+## Testes
+
+```bash
+npm i          # só Playwright, e só para os testes
+npm test       # a bateria inteira
+npm test 07    # só uma suíte
+```
+
+O `tests/rodar.js` sobe um **mock do Supabase** e um servidor estático, roda as
+sete suítes **em série** — elas compartilham o mesmo banco simulado e se
+atrapalham em paralelo — e derruba tudo no fim.
+
+| Suíte | O que cobre |
+|---|---|
+| `01-orcamento` | catálogo, filtros, cálculo, mapa, calendário, consolidado, exportações |
+| `02-modos-degradados` | sem geometria, sem biblioteca, sem banco, e duas pessoas editando |
+| `03-adicionar-evento` | formulário, autocomplete de cidades, evento sem sede, remoção |
+| `04-cenarios` | salvar, carregar e excluir cenários |
+| `05-rede-de-seguranca` | executa o ataque de apagamento e verifica a recuperação |
+| `06-capa` | números ao vivo, mundo em pontos, navegação entre as páginas |
+| `07-login` | somente-leitura, portão de escrita, login, logout, sessão expirada |
+
+O site em produção **não usa nada** do `package.json`: continua sendo HTML, CSS
+e JavaScript servidos direto. Playwright é dependência de teste.
+
+### Por que existe um mock do Supabase
+
+`supabase.co` é inalcançável do ambiente onde este projeto foi construído, então
+o handshake real nunca pôde ser exercitado aqui. O mock valida o **contrato** —
+verbos, filtros, cabeçalhos `Prefer`, `/auth/v1`, e as policies (anon lê,
+authenticated escreve, snapshots somente-leitura).
+
+Um mock mais permissivo que a realidade esconde bug em vez de revelar: este já
+pegou um `DELETE` que ignorava o filtro `id=eq.` e teria apagado uma tabela
+inteira.
+
+### Regressões que a bateria protege
+
+Cada uma corresponde a um bug que **já aconteceu**:
+
+- polígonos cruzando o antimeridiano viravam faixas atravessando o mapa
+- redimensionar a janela com o mapa oculto derrubava a camada de calor
+- uma regra `container > *` jogava os decorativos no fluxo e empurrava o hero
+  1.540px para baixo
+- a capa e a ferramenta mostrando totais diferentes
+- qualquer requisição externa reaparecendo
+
 ## Estrutura
 
 ```
@@ -296,6 +343,7 @@ assets/vendor/world/       geometria mundial Natural Earth 110m (domínio públi
 assets/vendor/cidades/     3.7 mil praças com país, região e coordenada
 tools/gerar-mundo.js       regenera a geometria a partir do world-atlas
 tools/gerar-cidades.js     regenera a base de cidades
+tests/                     bateria: 7 suítes, mock do Supabase e orquestrador
 supabase/schema.sql        tabelas, RLS e policies
 supabase/migracoes/        fechar a escrita e o rollback correspondente
 ```
