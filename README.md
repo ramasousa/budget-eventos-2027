@@ -93,12 +93,19 @@ endurecer, veja [Hardening opcional](#hardening-opcional).
 
 ## Publicar no GitHub Pages
 
-O site é estático e serve a partir da raiz do repositório. Uma única
-configuração, feita uma vez:
+O site é estático e serve a partir da raiz do repositório. Como o repositório
+estava vazio, a branch `claude/tech-events-budget-2027-j6vksj` é hoje a única
+e virou a branch padrão — **não existe `main`**.
 
-1. **Settings → Pages**
-2. **Source:** `Deploy from a branch`
-3. **Branch:** `main` · **Folder:** `/ (root)` → **Save**
+**Opção recomendada** — renomear a branch e publicar:
+
+1. **Settings → Branches** → renomear `claude/tech-events-budget-2027-j6vksj`
+   para `main` (o GitHub preserva todo o histórico).
+2. **Settings → Pages** → Source: `Deploy from a branch` →
+   Branch: `main` · Folder: `/ (root)` → **Save**.
+
+**Opção rápida** — publicar direto da branch atual: pule o passo 1 e escolha
+`claude/tech-events-budget-2027-j6vksj` como branch no passo 2.
 
 Em poucos minutos o site fica em:
 
@@ -107,10 +114,8 @@ https://ramasousa.github.io/budget-eventos-2027/
 ```
 
 O arquivo `.nojekyll` já está no repositório para o GitHub servir a pasta
-`assets/` sem processar com Jekyll.
-
-> O trabalho está na branch `claude/tech-events-budget-2027-j6vksj`. Faça o
-> merge em `main` para o Pages publicar.
+`assets/` sem processar com Jekyll. Todos os caminhos são relativos, então o
+site funciona no subdiretório do Pages sem ajuste nenhum.
 
 ---
 
