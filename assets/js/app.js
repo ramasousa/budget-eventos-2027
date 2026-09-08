@@ -36,32 +36,11 @@ const parseNum = s => Number(String(s).replace(/[^\d,-]/g, '').replace(/\./g, ''
 const plural = (n, sing, plur) => n === 1 ? sing : plur;
 
 /* ─── CÁLCULO ────────────────────────────────────────────────────────────── */
-function fxRate(cur) {
-  const r = Store.state.fx[cur];
-  return typeof r === 'number' && r > 0 ? r : 6.20;
-}
-
-/*  Ingressos de cortesia obtidos com fornecedores não entram na inscrição.
-    Guardamos a quantidade e não um sim/não: conseguir 2 passes para uma
-    equipe de 4 é o caso comum, e um booleano subestimaria o orçamento.  */
-function costOf(ev, people = 1, courtesy = 0) {
-  const p = Math.max(1, people);
-  const cort = Math.max(0, Math.min(p, courtesy || 0));
-  const unit = ev.ticket * fxRate(ev.currency);
-
-  const inscricoes = unit * (p - cort);
-  const economia   = unit * cort;
-  const passagens  = ev.passagem * p;
-  const hospedagem = ev.hotel * ev.nights * p;
-  const perdiem    = ev.perDiem * ev.days * p;
-  const traslado   = ev.transfer * p;
-
-  return {
-    inscricoes, economia, passagens, hospedagem, perdiem, traslado,
-    inscricoesCheias: unit * p,
-    total: inscricoes + passagens + hospedagem + perdiem + traslado,
-  };
-}
+/*  A fórmula vive em assets/js/custo.js, compartilhada com a landing page.
+    Aqui ficam só os atalhos que injetam o câmbio vigente do Store.  */
+const fxRate = cur => Custo.taxa(Store.state.fx, cur);
+const costOf = (ev, people = 1, courtesy = 0) =>
+  Custo.evento(ev, people, courtesy, Store.state.fx);
 
 function planOf(id) {
   const r = Store.state.plan[id];

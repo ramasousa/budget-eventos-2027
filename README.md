@@ -13,7 +13,21 @@ terceiros.
 
 ---
 
-## O que a página faz
+## As duas páginas
+
+| | |
+|---|---|
+| **`index.html`** — a capa | O que abre quando alguém recebe o link. Mostra o total do plano ao vivo, o quanto do limite está comprometido, quem alterou por último e o que há dentro. Fundo é o próprio mundo em matriz de pontos, com as praças do plano acesas — geometria de verdade, não foto de banco de imagens. |
+| **`app.html`** — a ferramenta | O orçamento em si, nas quatro abas. |
+
+A capa não carrega Leaflet nem a base de cidades: abre instantânea. O ponto
+vermelho da marca, dentro da ferramenta, volta para ela.
+
+Os dois números vêm da **mesma fórmula** (`assets/js/custo.js`). Se ela vivesse
+em dois lugares, um dia a capa e a ferramenta mostrariam totais diferentes e
+ninguém perceberia até a reunião — há um teste que compara os dois.
+
+## O que a ferramenta faz
 
 | Aba | Para quê |
 |---|---|
@@ -235,8 +249,12 @@ Rode [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor do Supabase.
 ## Estrutura
 
 ```
-index.html                 estrutura, modais e montagem
+index.html                 a capa
+app.html                   a ferramenta: estrutura, modais e montagem
 assets/css/styles.css      design system
+assets/css/capa.css        estilos da capa
+assets/js/custo.js         cálculo de custo — fonte única das duas páginas
+assets/js/capa.js          números ao vivo e o mundo em matriz de pontos
 assets/js/config.js        URL e chave publishable do Supabase
 assets/js/data.js          catálogo embarcado (fallback offline)
 assets/js/store.js         persistência, sincronização e cenários

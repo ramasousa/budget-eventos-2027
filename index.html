@@ -3,615 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Budget Eventos Internacionais 2027 — Open Platform &amp; BaaS</title>
-<meta name="description" content="Orçamento colaborativo de eventos internacionais de tecnologia 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
-<meta name="color-scheme" content="light">
-<!-- Orçamento interno: não deve aparecer em buscador. Não é controle de
-     acesso — quem tem o link continua vendo. -->
+<title>Eventos Internacionais 2027 — Open Platform &amp; BaaS</title>
+<meta name="description" content="Planejamento orçamentário de eventos internacionais 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
+<meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
-
-<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111'/><circle cx='16' cy='16' r='6' fill='%23990000'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230b1219'/><circle cx='16' cy='16' r='6' fill='%23bf1e2d'/></svg>">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/capa.css">
 </head>
-<body>
+<body class="capa">
 
-<!-- ─── TOPBAR ────────────────────────────────────────────────────────────── -->
-<header class="topbar">
+<!-- ─── HERO ──────────────────────────────────────────────────────────────── -->
+<header class="hero">
   <span class="noise"></span>
-  <div class="topbar-left">
-    <span class="brand-dot"></span>
-    <span class="brand-name">Banco Bradesco</span>
-    <span class="brand-sep">/</span>
-    <span class="brand-area">Open Platform &amp; BaaS — BU AI First</span>
+  <span class="glow hero-glow-a"></span>
+  <span class="glow hero-glow-b"></span>
+  <svg class="hero-mundo" id="heroMundo" viewBox="0 0 1600 688" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+
+  <nav class="hero-nav">
+    <div class="hero-marca">
+      <span class="brand-dot"></span>
+      <span class="brand-name">Banco Bradesco</span>
+      <span class="brand-sep">/</span>
+      <span class="brand-area">Open Platform &amp; BaaS — BU AI First</span>
+    </div>
+    <a class="hero-nav-link" href="app.html">Abrir o orçamento →</a>
+  </nav>
+
+  <div class="hero-corpo">
+    <span class="eyebrow on-dark">Planejamento Orçamentário 2027</span>
+    <h1 class="hero-titulo">Eventos Internacionais</h1>
+
+    <div class="hero-numero big-num" id="heroNumero">
+      <span class="hero-skeleton"></span>
+    </div>
+    <p class="hero-sub" id="heroSub">Carregando o plano…</p>
+
+    <div class="hero-barra" id="heroBarra">
+      <div class="hero-barra-trilho"><div class="hero-barra-fill" id="heroBarraFill"></div></div>
+      <div class="hero-barra-txt" id="heroBarraTxt"></div>
+    </div>
+
+    <div class="hero-acoes">
+      <a class="btn-primario" href="app.html">Ver o orçamento <span aria-hidden="true">→</span></a>
+      <a class="btn-secundario" href="#como">Como foi montado</a>
+    </div>
+
+    <div class="capa-estado" id="capaEstado"></div>
   </div>
-  <span class="topbar-year">Planejamento Orçamentário 2027</span>
 </header>
 
-<!-- ─── BARRA DE SINCRONIZAÇÃO ────────────────────────────────────────────── -->
-<div class="syncbar">
+<!-- ─── NÚMEROS ───────────────────────────────────────────────────────────── -->
+<section class="faixa">
+  <div class="capa-numeros" id="capaNumeros"></div>
+</section>
+
+<!-- ─── O QUE TEM DENTRO ──────────────────────────────────────────────────── -->
+<section class="secao" id="como">
+  <span class="eyebrow">O que você encontra lá dentro</span>
+  <h2 class="secao-titulo">Quatro leituras do mesmo orçamento</h2>
+  <p class="secao-sub">
+    Cada aba responde a uma pergunta diferente sobre o mesmo plano. O painel de
+    orçamento acompanha todas elas.
+  </p>
+
+  <div class="cards">
+    <article class="capa-card">
+      <span class="capa-card-n">01</span>
+      <h3>Catálogo</h3>
+      <p>Cada evento com o custo aberto por pessoa, o benefício estratégico, o
+         perfil de quem deve ir e o resultado esperado. Falta algum? Dá para
+         incluir pela própria página.</p>
+    </article>
+    <article class="capa-card">
+      <span class="capa-card-n">02</span>
+      <h3>Mapa de calor</h3>
+      <p>Onde o ecossistema se concentra, e onde nós vamos — com o investimento
+         de cada praça. Mostra concentração geográfica que a lista esconde.</p>
+    </article>
+    <article class="capa-card">
+      <span class="capa-card-n">03</span>
+      <h3>Calendário</h3>
+      <p>A distribuição no ano e o custo que cada mês carrega, com alerta de
+         concentração de ausências. Três viagens em outubro aparecem antes de
+         virarem problema.</p>
+    </article>
+    <article class="capa-card">
+      <span class="capa-card-n">04</span>
+      <h3>Consolidado</h3>
+      <p>A visão para apresentar: composição do custo, distribuição por frente,
+         geografia e trimestre, detalhamento evento a evento e as premissas
+         explícitas.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ─── PREMISSAS ─────────────────────────────────────────────────────────── -->
+<section class="secao secao-escura">
   <span class="noise"></span>
-  <span class="sync-dot" id="syncDot"></span>
-  <span class="sync-text" id="syncText">Carregando…</span>
-  <span class="sync-spacer"></span>
-  <input type="text" class="ghost-input" id="authorInput" placeholder="Seu nome" style="width:120px" aria-label="Seu nome">
-  <button class="ghost-btn primary" id="btnNovoEvento">+ Adicionar evento</button>
-  <button class="ghost-btn" id="btnSaveScenario">Salvar cenário</button>
-  <button class="ghost-btn" id="btnScenarios">Cenários</button>
-  <button class="ghost-btn" id="btnPremissas">Premissas</button>
-</div>
+  <div class="secao-conteudo">
+    <span class="eyebrow on-dark">Sobre os números</span>
+    <h2 class="secao-titulo claro">O que está dentro e o que não está</h2>
 
-<!-- ─── ABAS ──────────────────────────────────────────────────────────────── -->
-<nav class="tabs">
-  <button class="tab active" data-tab="catalogo">Catálogo<span class="tab-badge" id="tabCountCatalogo">0</span></button>
-  <button class="tab" data-tab="mapa">Mapa de calor</button>
-  <button class="tab" data-tab="calendario">Calendário 2027</button>
-  <button class="tab" data-tab="consolidado">Consolidado<span class="tab-badge" id="tabCountSel" style="display:none">0</span></button>
-</nav>
-
-<div class="layout">
-  <main class="main">
-
-    <!-- ─── VIEW: CATÁLOGO ─────────────────────────────────────────────── -->
-    <section class="view active" id="view-catalogo">
-      <div class="view-head">
-        <span class="eyebrow">Catálogo 2027</span>
-        <h1 class="view-title">Eventos Internacionais</h1>
-        <p class="view-sub">
-          Selecione os eventos e defina o número de participantes. O orçamento é atualizado
-          em tempo real e fica visível para todos que abrirem esta página.
-        </p>
+    <div class="premissas">
+      <div class="premissa">
+        <h4>Custo por pessoa</h4>
+        <p>Passagem, inscrição, hospedagem, diárias e traslado. Inscrições ficam
+           na moeda de origem e são convertidas pelo câmbio definido nas premissas.</p>
       </div>
-
-      <div class="toolbar" id="catFilters"></div>
-      <div class="toolbar">
-        <span class="toolbar-k">Prioridade</span>
-        <span id="prioFilters" style="display:contents"></span>
-        <span class="toolbar-sep"></span>
-        <input type="search" class="search" id="searchInput" placeholder="Buscar evento, cidade, tema…" aria-label="Buscar">
-        <button class="chip" id="btnOnlySelected">Só selecionados</button>
-        <span class="toolbar-note" id="fxNote"></span>
+      <div class="premissa">
+        <h4>Ingressos de cortesia</h4>
+        <p>Boa parte dos ingressos vem dos fornecedores. Marcar isso zera a
+           inscrição de quem está coberto — as demais rubricas continuam valendo.</p>
       </div>
-
-      <div class="events-grid" id="eventsGrid"></div>
-    </section>
-
-    <!-- ─── VIEW: MAPA ─────────────────────────────────────────────────── -->
-    <section class="view flush" id="view-mapa">
-      <div class="map-wrap">
-        <div id="map"></div>
-        <span class="noise map-noise"></span>
-
-        <div class="map-fallback" id="mapFallback"></div>
-
-        <div class="map-overlay map-topleft">
-          <div class="map-panel">
-            <span class="noise"></span>
-            <span class="eyebrow on-dark">Leitura do mapa</span>
-            <div class="map-modes">
-              <button class="map-mode active" data-mapmode="plano">Nosso plano</button>
-              <button class="map-mode" data-mapmode="mercado">Mercado</button>
-            </div>
-            <div class="map-hint" id="mapResumo"></div>
-          </div>
-        </div>
-
-        <div class="map-overlay map-topright">
-          <div class="map-panel">
-            <span class="noise"></span>
-            <span class="eyebrow on-dark" style="margin-bottom:12px">Praças por intensidade</span>
-            <div id="mapRanking"></div>
-          </div>
-        </div>
-
-        <div class="map-overlay map-bottomleft">
-          <div class="map-panel">
-            <span class="noise"></span>
-            <div class="legend-scale">
-              <span class="legend-t">baixo</span>
-              <span class="legend-grad"></span>
-              <span class="legend-t">alto</span>
-            </div>
-            <div class="legend-cats" id="mapLegendCats"></div>
-            <div class="legend-t" style="margin-top:10px;opacity:.7">Geometria: Natural Earth · domínio público</div>
-          </div>
-        </div>
+      <div class="premissa">
+        <h4>Não está incluído</h4>
+        <p>Visto, seguro-viagem e excesso de bagagem. Tudo sujeito à política de
+           viagens vigente do banco.</p>
       </div>
-    </section>
-
-    <!-- ─── VIEW: CALENDÁRIO ───────────────────────────────────────────── -->
-    <section class="view" id="view-calendario">
-      <div class="view-head">
-        <span class="eyebrow">Distribuição no ano</span>
-        <h1 class="view-title">Calendário e carga de viagem</h1>
-        <p class="view-sub">
-          Distribuição dos eventos ao longo de 2027 e o custo que cada mês carrega.
-          Serve para enxergar concentração de ausências antes de fechar o plano — clique
-          em qualquer evento para incluir ou remover.
-        </p>
-      </div>
-      <div class="tl-months" id="timeline"></div>
-    </section>
-
-    <!-- ─── VIEW: CONSOLIDADO ──────────────────────────────────────────── -->
-    <section class="view" id="view-consolidado">
-      <div class="view-head">
-        <span class="eyebrow">Visão executiva</span>
-        <h1 class="view-title">Consolidado do orçamento</h1>
-        <p class="view-sub">
-          Visão para apresentação. Números abertos por frente temática, composição de custo,
-          distribuição geográfica e detalhamento evento a evento.
-        </p>
-      </div>
-      <div id="consolidado"></div>
-    </section>
-
-  </main>
-
-  <!-- ─── RAIL: ORÇAMENTO ──────────────────────────────────────────────── -->
-  <aside class="rail">
-    <span class="noise"></span>
-    <span class="glow rail-glow"></span>
-    <div class="rail-head">
-      <span class="eyebrow on-dark">Orçamento consolidado</span>
-      <div class="rail-total-k">Total selecionado</div>
-      <div class="rail-total-v" id="railTotal">R$ 0</div>
-      <div class="rail-stats">
-        <div><div class="rail-k">Eventos</div><div class="rail-v" id="railEvents">0</div></div>
-        <div><div class="rail-k">Participações</div><div class="rail-v" id="railPeople">0</div></div>
-        <div><div class="rail-k">Passagens</div><div class="rail-v" id="railPassagens">R$ 0</div></div>
-        <div><div class="rail-k">Economia cortesia</div><div class="rail-v green" id="railEconomia">R$ 0</div></div>
+      <div class="premissa">
+        <h4>Datas de 2027</h4>
+        <p>Poucas sedes já são oficiais. Cada evento traz o selo de <em>data
+           estimada</em> ou <em>sede a confirmar</em>, para revalidar na abertura
+           das inscrições.</p>
       </div>
     </div>
 
-    <div class="rail-budget">
-      <div class="rail-k">Limite de orçamento definido</div>
-      <div class="rail-budget-row">
-        <span class="rail-prefix">R$</span>
-        <input type="text" class="budget-input" id="budgetInput" inputmode="numeric" aria-label="Limite de orçamento">
-      </div>
-      <div class="bar-wrap"><div class="bar-used" id="railBar"></div></div>
-      <div class="bar-pct" id="railPct">—</div>
-    </div>
-
-    <div class="rail-list" id="railList"></div>
-
-    <div class="rail-foot">
-      <button class="rail-btn" id="btnCSV">Exportar CSV</button>
-      <button class="rail-btn alt" id="btnTXT">Resumo TXT</button>
-    </div>
-  </aside>
-</div>
-
-<!-- ─── MODAL: CENÁRIOS ───────────────────────────────────────────────────── -->
-<div class="overlay" id="modalScenarios">
-  <div class="modal">
-    <span class="eyebrow">Comparação</span>
-    <div class="modal-title">Cenários salvos</div>
-    <div class="modal-sub">
-      Um cenário é uma fotografia do orçamento: quais eventos, quantas pessoas, qual limite
-      e qual câmbio. Serve para comparar alternativas — “plano cheio” contra “plano enxuto” —
-      sem perder nenhuma das duas. Carregar um cenário substitui o plano compartilhado atual.
-    </div>
-    <div id="scenarioList"></div>
-
-    <div style="margin:26px 0 12px"><span class="eyebrow">Histórico automático</span></div>
-    <div class="modal-sub" style="margin-bottom:14px">
-      O banco guarda sozinho o estado do plano — sempre antes de qualquer
-      exclusão, e a cada 10 minutos de uso. Serve para desfazer um apagamento
-      acidental. Restaurar também gera um ponto de retorno, então nada aqui é
-      irreversível.
-    </div>
-    <div id="snapshotList"></div>
-
-    <div class="modal-foot">
-      <button class="modal-btn ghost" data-close>Fechar</button>
+    <div class="secao-cta">
+      <a class="btn-primario" href="app.html">Ver o orçamento <span aria-hidden="true">→</span></a>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ─── MODAL: PREMISSAS ──────────────────────────────────────────────────── -->
-<div class="overlay" id="modalPremissas">
-  <div class="modal">
-    <span class="eyebrow">Parâmetros compartilhados</span>
-    <div class="modal-title">Premissas do orçamento</div>
-    <div class="modal-sub">
-      Estes parâmetros valem para todo mundo que abre a página. Alterar o câmbio recalcula
-      as inscrições de todos os eventos na hora.
-    </div>
-
-    <div class="modal-sec">
-      <div class="modal-k">Câmbio aplicado às inscrições (R$)</div>
-      <div class="fx-grid">
-        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">USD</label>
-          <input type="text" class="modal-input" id="fxUSD" inputmode="decimal"></div>
-        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">EUR</label>
-          <input type="text" class="modal-input" id="fxEUR" inputmode="decimal"></div>
-        <div><label class="modal-k" style="font-weight:500;letter-spacing:0">GBP</label>
-          <input type="text" class="modal-input" id="fxGBP" inputmode="decimal"></div>
-      </div>
-    </div>
-
-    <div class="modal-sec">
-      <div class="modal-k">Limite de orçamento da superintendência</div>
-      <input type="text" class="modal-input" id="premBudget" inputmode="numeric">
-    </div>
-
-    <div class="modal-sec">
-      <div class="modal-k">Seu nome — aparece como autor das alterações</div>
-      <input type="text" class="modal-input" id="premAuthor" placeholder="Raul">
-    </div>
-
-    <div class="note-box" style="font-size:12px">
-      Passagens e hospedagem já estão em reais e são estimativas de planejamento.
-      Ingressos de cortesia são marcados evento a evento, no card.
-      Para ajustar o custo de um evento específico, edite a linha correspondente na tabela
-      <b>eventos2027_events</b> do Supabase — a página lê direto de lá.
-    </div>
-
-    <div class="modal-foot">
-      <button class="modal-btn primary" id="btnSavePremissas">Salvar premissas</button>
-      <button class="modal-btn ghost" data-close>Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── MODAL: NOVO EVENTO ────────────────────────────────────────────────── -->
-<div class="overlay" id="modalEvento">
-  <div class="modal modal-wide">
-    <span class="eyebrow">Fora do catálogo</span>
-    <div class="modal-title">Adicionar evento</div>
-    <div class="modal-sub">
-      O catálogo não cobre tudo. Inclua aqui um evento que faça sentido para a
-      área — ele passa a valer para todo mundo que abrir a página, entra no mapa,
-      no calendário e no consolidado como qualquer outro.
-    </div>
-
-    <form id="formEvento" autocomplete="off" novalidate>
-      <div class="form-sec">
-        <span class="eyebrow">Identificação</span>
-        <div class="form-grid">
-          <label class="campo campo-2"><span class="modal-k">Nome do evento *</span>
-            <input class="modal-input" name="name" required maxlength="80" placeholder="ex: Open Banking Summit"></label>
-          <label class="campo"><span class="modal-k">Edição</span>
-            <input class="modal-input" name="edition" value="2027" maxlength="12"></label>
-          <label class="campo"><span class="modal-k">Frente temática *</span>
-            <select class="modal-input" name="category" required id="fCategoria"></select></label>
-          <label class="campo"><span class="modal-k">Prioridade</span>
-            <select class="modal-input" name="priority">
-              <option value="alta">Alta</option>
-              <option value="media" selected>Média</option>
-              <option value="baixa">Baixa</option>
-            </select></label>
-          <label class="campo"><span class="modal-k">Confiança da data</span>
-            <select class="modal-input" name="confidence">
-              <option value="confirmado">Confirmada</option>
-              <option value="estimado" selected>Estimada</option>
-              <option value="a_confirmar">A confirmar</option>
-            </select></label>
-        </div>
-      </div>
-
-      <div class="form-sec">
-        <span class="eyebrow">Onde e quando</span>
-        <div class="form-grid">
-          <label class="campo campo-2 cidade-wrap"><span class="modal-k">Cidade *</span>
-            <input class="modal-input" name="cidade" id="fCidade" placeholder="digite e escolha na lista">
-            <div class="ac-lista" id="acLista"></div>
-            <span class="campo-nota" id="fCidadeNota"></span></label>
-          <label class="campo"><span class="modal-k">Mês *</span>
-            <select class="modal-input" name="monthNum" required id="fMes"></select></label>
-          <label class="campo campo-2"><span class="modal-k">Quando, em palavras</span>
-            <input class="modal-input" name="dateLabel" maxlength="60" placeholder="ex: Início de março"></label>
-          <label class="campo campo-2"><span class="modal-k">Site do evento</span>
-            <input class="modal-input" name="url" type="url" placeholder="https://"></label>
-        </div>
-        <label class="check-linha">
-          <input type="checkbox" id="fSemSede">
-          <span>Sede ainda não definida — entra no orçamento, mas fica fora do mapa</span>
-        </label>
-      </div>
-
-      <div class="form-sec">
-        <span class="eyebrow">Custos por pessoa</span>
-        <div class="form-grid">
-          <label class="campo"><span class="modal-k">Passagem (R$) *</span>
-            <input class="modal-input" name="passagem" inputmode="numeric" required placeholder="8.000"></label>
-          <label class="campo"><span class="modal-k">Inscrição</span>
-            <input class="modal-input" name="ticket" inputmode="decimal" placeholder="1.200"></label>
-          <label class="campo"><span class="modal-k">Moeda</span>
-            <select class="modal-input" name="currency">
-              <option value="USD">USD</option><option value="EUR">EUR</option>
-              <option value="GBP">GBP</option><option value="BRL">BRL</option>
-            </select></label>
-          <label class="campo"><span class="modal-k">Hotel por noite (R$)</span>
-            <input class="modal-input" name="hotel" inputmode="numeric" placeholder="850"></label>
-          <label class="campo"><span class="modal-k">Noites</span>
-            <input class="modal-input" name="nights" inputmode="numeric" value="4"></label>
-          <label class="campo"><span class="modal-k">Diária / per diem (R$)</span>
-            <input class="modal-input" name="perDiem" inputmode="numeric" placeholder="400"></label>
-          <label class="campo"><span class="modal-k">Dias de evento</span>
-            <input class="modal-input" name="days" inputmode="numeric" value="3"></label>
-          <label class="campo"><span class="modal-k">Traslado (R$)</span>
-            <input class="modal-input" name="transfer" inputmode="numeric" placeholder="600"></label>
-        </div>
-      </div>
-
-      <div class="form-sec">
-        <span class="eyebrow">Por que ir</span>
-        <div class="form-grid">
-          <label class="campo campo-3"><span class="modal-k">Benefício estratégico *</span>
-            <textarea class="modal-input" name="benefit" rows="3" required maxlength="600"
-              placeholder="O que este evento entrega para a área que outro não entrega."></textarea></label>
-          <label class="campo campo-3"><span class="modal-k">Quem deve ir</span>
-            <textarea class="modal-input" name="audience" rows="2" maxlength="300"
-              placeholder="Perfil e senioridade de quem tira proveito."></textarea></label>
-          <label class="campo campo-3"><span class="modal-k">O que esperamos trazer</span>
-            <textarea class="modal-input" name="outcome" rows="2" maxlength="300"
-              placeholder="O resultado concreto que justifica o investimento."></textarea></label>
-        </div>
-      </div>
-
-      <div class="form-previa" id="fPrevia">
-        <span class="modal-k" style="margin:0">Custo estimado por pessoa</span>
-        <span class="form-previa-v" id="fPreviaValor">R$ 0</span>
-      </div>
-
-      <div class="modal-foot">
-        <button type="submit" class="modal-btn primary" id="btnSalvarEvento">Adicionar ao catálogo</button>
-        <button type="button" class="modal-btn ghost" data-close>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
-<!-- Leaflet servido do próprio repositório: sem CDN, sem SRI para manter,
-     e o mapa continua funcionando em rede que bloqueia domínios externos. -->
-<script src="assets/vendor/leaflet/leaflet.js"></script>
-<script src="assets/vendor/leaflet/leaflet-heat.js"></script>
+<footer class="capa-rodape">
+  <span>Open Platform &amp; BaaS · BU AI First — Banco Bradesco</span>
+  <span>Documento interno de planejamento. Não indexado.</span>
+</footer>
 
 <script src="assets/js/config.js"></script>
+<script src="assets/js/custo.js"></script>
 <script src="assets/js/data.js"></script>
-<script src="assets/js/cidades.js"></script>
-<script src="assets/js/store.js"></script>
-<script src="assets/js/app.js"></script>
-<script src="assets/js/map.js"></script>
-
-<script>
-/* ─── MONTAGEM ────────────────────────────────────────────────────────────── */
-(function boot() {
-
-  /* O cabeçalho fixo muda de altura conforme a syncbar quebra em telas
-     estreitas. Medimos de verdade em vez de chutar um valor no CSS. */
-  function medirChrome() {
-    const h = ['.topbar', '.syncbar', '.tabs']
-      .reduce((soma, sel) => soma + (document.querySelector(sel)?.offsetHeight || 0), 0);
-    document.documentElement.style.setProperty('--chrome', h + 'px');
-  }
-  medirChrome();
-  window.addEventListener('resize', medirChrome);
-
-  /* abas */
-  document.querySelectorAll('.tab').forEach(t =>
-    t.onclick = () => switchTab(t.dataset.tab));
-
-  /* busca e filtros locais */
-  let searchTimer = null;
-  document.getElementById('searchInput').addEventListener('input', e => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => { ui.search = e.target.value; renderFilters(); renderCatalog(); }, 160);
-  });
-  const btnOnly = document.getElementById('btnOnlySelected');
-  btnOnly.onclick = () => {
-    ui.onlySelected = !ui.onlySelected;
-    btnOnly.classList.toggle('active', ui.onlySelected);
-    renderCatalog();
-  };
-
-  /* limite de orçamento */
-  const budgetInput = document.getElementById('budgetInput');
-  budgetInput.addEventListener('input', e => Store.setBudget(parseNum(e.target.value)));
-  budgetInput.addEventListener('blur', () => renderRail());
-
-  /* exportações */
-  document.getElementById('btnCSV').onclick = exportCSV;
-  document.getElementById('btnTXT').onclick = exportTXT;
-
-  /* autor */
-  const authorInput = document.getElementById('authorInput');
-  authorInput.value = Store.author() === 'anônimo' ? '' : Store.author();
-  authorInput.addEventListener('change', () => {
-    Store.setAuthor(authorInput.value.trim() || 'anônimo');
-    toast('Nome registrado. Suas próximas alterações aparecem assinadas.');
-  });
-
-  /* modais */
-  const open  = id => document.getElementById(id).classList.add('open');
-  const close = id => document.getElementById(id).classList.remove('open');
-  document.querySelectorAll('.overlay').forEach(ov => {
-    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
-    ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.classList.remove('open'));
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
-  });
-
-  /* premissas */
-  document.getElementById('btnPremissas').onclick = () => {
-    document.getElementById('fxUSD').value = Store.state.fx.USD;
-    document.getElementById('fxEUR').value = Store.state.fx.EUR;
-    document.getElementById('fxGBP').value = Store.state.fx.GBP;
-    document.getElementById('premBudget').value = Store.state.budgetLimit.toLocaleString('pt-BR');
-    document.getElementById('premAuthor').value = Store.author() === 'anônimo' ? '' : Store.author();
-    open('modalPremissas');
-  };
-  document.getElementById('btnSavePremissas').onclick = () => {
-    const num = id => Number(String(document.getElementById(id).value).replace(',', '.'));
-    const fx = { USD: num('fxUSD'), EUR: num('fxEUR'), GBP: num('fxGBP') };
-    for (const [k, v] of Object.entries(fx)) {
-      if (!(v > 0)) return toast('Câmbio de ' + k + ' inválido.', true);
-    }
-    Store.setFx(fx);
-    Store.setBudget(parseNum(document.getElementById('premBudget').value));
-    const nome = document.getElementById('premAuthor').value.trim();
-    if (nome) { Store.setAuthor(nome); authorInput.value = nome; }
-    close('modalPremissas');
-    toast('Premissas atualizadas para todos.');
-  };
-
-  /* novo evento */
-  FormEvento.ligar();
-  document.getElementById('btnNovoEvento').onclick = () => FormEvento.abrir();
-
-  /* cenários */
-  document.getElementById('btnSaveScenario').onclick = async () => {
-    const t = totals();
-    if (!t.events) return toast('Selecione ao menos um evento antes de salvar.', true);
-    const nome = prompt('Nome do cenário (ex: "Plano enxuto — só prioridade alta")');
-    if (!nome || !nome.trim()) return;
-    try {
-      await Store.saveScenario(nome.trim(), t.total);
-      toast('Cenário "' + nome.trim() + '" salvo e compartilhado.');
-    } catch (e) {
-      toast('Não foi possível salvar no banco. Verifique a conexão.', true);
-    }
-  };
-
-  async function renderCenarios() {
-    const host = document.getElementById('scenarioList');
-    const vazio = txt => `<div style="font-size:12.5px;font-weight:300;color:var(--ink-3);padding:12px 0">${txt}</div>`;
-    host.innerHTML = vazio('Carregando…');
-
-    let list = [];
-    try { list = await Store.listScenarios(); }
-    catch (e) { host.innerHTML = vazio('Não foi possível carregar os cenários (sem conexão com o banco).'); return; }
-    if (!list.length) { host.innerHTML = vazio('Nenhum cenário salvo ainda.'); return; }
-
-    host.innerHTML = list.map(s => `
-      <div class="scn-row">
-        <div class="scn-name">${esc(s.name)}
-          <div class="scn-meta">${esc(s.author || 'anônimo')} · ${new Date(s.created_at).toLocaleDateString('pt-BR')} · ${(n => `${n} ${n === 1 ? 'evento' : 'eventos'}`)(Object.keys(s.selections || {}).length)}</div>
-        </div>
-        <span class="scn-total">${brl(s.total || 0)}</span>
-        <button class="scn-load" data-load="${esc(s.id)}">Carregar</button>
-        <button class="scn-del" data-del="${esc(s.id)}" title="Excluir cenário" aria-label="Excluir cenário">✕</button>
-      </div>`).join('');
-
-    host.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
-      const s = list.find(x => x.id === b.dataset.load);
-      if (!s) return;
-      if (!confirm(`Carregar "${s.name}"? Isso substitui o plano compartilhado atual para todos.`)) return;
-      b.textContent = '…';
-      try {
-        await Store.applyScenario(s);
-        close('modalScenarios');
-        toast('Cenário "' + s.name + '" carregado.');
-      } catch (e) {
-        toast('Cenário aplicado localmente, mas houve falha ao propagar.', true);
-      }
-    });
-
-    host.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-      const s = list.find(x => x.id === b.dataset.del);
-      if (!s) return;
-      // Apagar um cenário não mexe no plano vigente — é só a fotografia que sai.
-      if (!confirm(`Excluir o cenário "${s.name}"?\n\nIsso apaga a fotografia salva para todos. O orçamento em uso continua como está.`)) return;
-      b.disabled = true;
-      b.textContent = '…';
-      try {
-        await Store.deleteScenario(s.id);
-        toast('Cenário "' + s.name + '" excluído.');
-        renderCenarios();
-      } catch (e) {
-        b.disabled = false; b.textContent = '✕';
-        toast('Não foi possível excluir o cenário.', true);
-      }
-    });
-  }
-
-  async function renderHistorico() {
-    const host = document.getElementById('snapshotList');
-    const vazio = txt => `<div style="font-size:12.5px;font-weight:300;color:var(--ink-3);padding:12px 0">${txt}</div>`;
-    host.innerHTML = vazio('Carregando…');
-
-    let list = [];
-    try { list = await Store.listSnapshots(); }
-    catch (e) { host.innerHTML = vazio('Não foi possível carregar o histórico.'); return; }
-    if (!list.length) { host.innerHTML = vazio('Nenhum ponto de retorno ainda — ele aparece assim que o plano começar a mudar.'); return; }
-
-    const quando = iso => {
-      const d = new Date(iso);
-      const min = Math.round((Date.now() - d.getTime()) / 60000);
-      if (min < 1) return 'agora';
-      if (min < 60) return `há ${min} min`;
-      if (min < 1440) return `há ${Math.round(min / 60)}h`;
-      return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    };
-
-    host.innerHTML = list.map(s => `
-      <div class="scn-row">
-        <div class="scn-name">${quando(s.taken_at)}
-          <div class="scn-meta">${s.motivo === 'antes_de_apagar' ? 'antes de uma exclusão' : 'checkpoint'} · ${
-            (n => `${n} ${n === 1 ? 'evento' : 'eventos'}`)(s.eventos || 0)} · ${
-            (n => `${n} ${n === 1 ? 'pessoa' : 'pessoas'}`)(s.participacoes || 0)}</div>
-        </div>
-        <span class="badge ${s.motivo === 'antes_de_apagar' ? 'badge-amber' : 'badge-gray'}">${
-          s.motivo === 'antes_de_apagar' ? 'pré-exclusão' : 'auto'}</span>
-        <button class="scn-load" data-snap="${s.id}">Restaurar</button>
-      </div>`).join('');
-
-    host.querySelectorAll('[data-snap]').forEach(b => b.onclick = async () => {
-      const s = list.find(x => String(x.id) === b.dataset.snap);
-      if (!s) return;
-      if (!confirm(`Restaurar o plano de ${quando(s.taken_at)}?\n\nIsso substitui o plano atual para todos. O estado de agora vira um novo ponto de retorno, então dá para voltar.`)) return;
-      b.disabled = true; b.textContent = '…';
-      try {
-        await Store.restoreSnapshot(s);
-        close('modalScenarios');
-        toast('Plano restaurado.');
-      } catch (e) {
-        b.disabled = false; b.textContent = 'Restaurar';
-        toast('Não foi possível restaurar.', true);
-      }
-    });
-  }
-
-  document.getElementById('btnScenarios').onclick = () => {
-    open('modalScenarios');
-    renderCenarios();
-    renderHistorico();
-  };
-
-  /* modos do mapa */
-  document.querySelectorAll('[data-mapmode]').forEach(b =>
-    b.onclick = () => EventMap.setMode(b.dataset.mapmode));
-
-  /* legenda de categorias do mapa */
-  document.getElementById('mapLegendCats').innerHTML = Object.values(CATEGORIES)
-    .map(c => `<span class="legend-cat"><span class="legend-swatch" style="background:${c.color}"></span>${c.label}</span>`)
-    .join('');
-
-  /* nota de câmbio no catálogo */
-  function fxNote() {
-    const f = Store.state.fx;
-    const n = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    document.getElementById('fxNote').textContent =
-      `Câmbio: USD ${n(f.USD)} · EUR ${n(f.EUR)} · GBP ${n(f.GBP)}`;
-  }
-
-  /* liga o store à tela */
-  Store.onChange(() => { render(); fxNote(); });
-  Store.onStatus(renderStatus);
-
-  /* garante gravação das pendências ao sair */
-  window.addEventListener('beforeunload', () => Store.flush());
-
-  Store.init();
-})();
-</script>
+<script src="assets/js/capa.js"></script>
+<script>Capa.iniciar();</script>
 </body>
 </html>
