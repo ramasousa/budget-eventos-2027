@@ -797,3 +797,51 @@ a { color: inherit; }
 .brand-voltar { display: flex; align-items: center; padding: 4px; margin: -4px;
   border-radius: 50%; transition: transform .3s var(--ease); }
 .brand-voltar:hover { transform: scale(1.35); }
+
+/* ─── SESSÃO E MODO SOMENTE-LEITURA ──────────────────────────────────────── */
+.sessao { display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10px; color: var(--ink-4); }
+.sessao-ponto { width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-s); flex-shrink: 0; }
+
+.faixa-leitura {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 32px; background: var(--amber-s);
+  border-bottom: 1px solid rgba(224,169,95,.28);
+  font-size: 12.5px; font-weight: 300; color: var(--amber-d); flex-shrink: 0;
+}
+.faixa-leitura b { font-weight: 600; }
+.faixa-leitura-icone { font-size: 13px; opacity: .8; }
+.faixa-leitura .ghost-btn { margin-left: auto; border-color: var(--amber-d); color: var(--amber-d); }
+.faixa-leitura .ghost-btn.primary { background: var(--amber-d); border-color: var(--amber-d); color: #fff; }
+.faixa-leitura .ghost-btn.primary:hover { background: var(--red); border-color: var(--red); }
+.faixa-leitura[hidden] { display: none; }
+
+/* Afordância: deslogado, o que edita fica visivelmente inerte. A garantia
+   real é a RLS no banco; isto evita que alguém monte um plano inteiro para
+   descobrir no fim que não podia salvar. */
+body.somente-leitura .card-check,
+body.somente-leitura .people-row,
+body.somente-leitura .courtesy-row,
+body.somente-leitura .btn-remover,
+body.somente-leitura .sel-x { opacity: .38; pointer-events: none; }
+body.somente-leitura .event-card .card-body,
+body.somente-leitura .tl-pill,
+body.somente-leitura .fb-city,
+body.somente-leitura .fb-ev-btn { cursor: default; }
+body.somente-leitura .event-card:hover { transform: none; box-shadow: none; border-color: var(--cream-3); }
+body.somente-leitura .tl-pill:hover { border-color: var(--cream-3); color: var(--ink-3); transform: none; }
+body.somente-leitura .budget-input { opacity: .5; pointer-events: none; }
+body.somente-leitura .rail-btn { /* exportar continua valendo para quem só lê */ }
+.ghost-btn:disabled { opacity: .35; pointer-events: none; }
+
+.login-erro {
+  background: var(--red-soft); border: 1px solid var(--red-line); color: var(--red);
+  border-radius: 4px; padding: 10px 12px; font-size: 12px; margin-bottom: 4px;
+}
+.login-erro[hidden] { display: none; }
+
+@media (max-width: 680px) {
+  .faixa-leitura { padding: 11px 24px; }
+  .faixa-leitura .ghost-btn { margin-left: 0; }
+}

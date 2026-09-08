@@ -507,9 +507,11 @@ function renderStatus() {
   if (s.online) {
     dot.className = 'sync-dot live';
     const hhmm = s.lastSync ? s.lastSync.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-    txt.innerHTML = `<b>Compartilhado</b> — todos com o link veem este mesmo orçamento` +
-      (hhmm ? ` · sincronizado às ${hhmm}` : '') +
-      (s.lastEditor && s.lastEditor !== 'anônimo' ? ` · última edição por ${esc(s.lastEditor)}` : '');
+    // A barra ganhou os controles de sessão; o texto precisa caber numa linha.
+    // Que o orçamento é compartilhado já está dito na faixa e na capa.
+    const quem = s.lastEditor && s.lastEditor !== 'anônimo'
+      ? ` · última edição por ${esc(s.lastEditor.split('@')[0])}` : '';
+    txt.innerHTML = `<b>Compartilhado</b>` + (hhmm ? ` · sincronizado às ${hhmm}` : '') + quem;
   } else {
     dot.className = 'sync-dot err';
     txt.innerHTML = 'Sem conexão com o banco — trabalhando localmente. Reconecta sozinho.';

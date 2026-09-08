@@ -37,6 +37,21 @@ const Store = (() => {
   let pendingTimer = null;
   let pendingOps = new Map();                    // dedupe por chave
 
+  /* ─── portão de escrita ────────────────────────────────────────────────
+     Um único ponto: se alguém adicionar um mutador novo e esquecer de
+     protegê-lo, o portão continua sendo o lugar certo para descobrir.
+     A interface também desabilita os controles, mas isso é afordância —
+     a garantia real é a RLS no banco. Aqui é só para não deixar a pessoa
+     montar um plano inteiro e descobrir no fim que não podia salvar.
+     ─────────────────────────────────────────────────────────────────────── */
+  let aoNegar = null;
+  let aoPerderSessao = null;
+  function podeEscrever() {
+    if (typeof Auth === 'undefined' || Auth.autenticado()) return true;
+    if (aoNegar) aoNegar();
+    return false;
+  }
+
   /* ─── util ─────────────────────────────────────────────────────────────── */
   // Um listener que falhe não pode derrubar quem disparou a mudança: o
   // estado já mudou e o resto da operação (fechar um modal, avisar o
@@ -51,6 +66,9 @@ const Store = (() => {
     !SUPABASE.url.includes('SUA_URL');
 
   function author() {
+    // Autenticado: a autoria é o e-mail da sessão — e o banco recusa gravar
+    // em nome de outra pessoa. O nome digitado só sobrevive como legado.
+    if (typeof Auth !== 'undefined' && Auth.autenticado()) return Auth.email() || 'autenticado';
     let a = '';
     try { a = localStorage.getItem(LS_AUTHOR) || ''; } catch (e) { /* modo privado */ }
     return a || 'anônimo';
@@ -75,9 +93,16 @@ const Store = (() => {
   /* ─── REST ─────────────────────────────────────────────────────────────── */
   async function rest(method, path, body, extraPrefer) {
     if (!configured()) throw new Error('supabase-nao-configurado');
+    // Ler é público (chave publishable). Escrever usa o token da sessão —
+    // é o token que a RLS enxerga como authenticated.
+    let bearer = SUPABASE.key;
+    if (method !== 'GET' && typeof Auth !== 'undefined') {
+      const t = await Auth.token();
+      if (t) bearer = t;
+    }
     const headers = {
       apikey: SUPABASE.key,
-      Authorization: 'Bearer ' + SUPABASE.key,
+      Authorization: 'Bearer ' + bearer,
     };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const prefer = [method === 'GET' ? '' : 'return=minimal', extraPrefer]
@@ -92,7 +117,11 @@ const Store = (() => {
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: ctrl.signal,
       });
-      if (!res.ok) throw new Error(method + ' ' + path + ' → ' + res.status);
+      if (!res.ok) {
+        const e = new Error(method + ' ' + path + ' → ' + res.status);
+        e.status = res.status;
+        throw e;
+      }
       if (method === 'GET') return res.json();
       return null;
     } finally { clearTimeout(timeout); }
@@ -131,8 +160,17 @@ const Store = (() => {
       state.online = true;
       state.lastSync = new Date();
     } catch (e) {
-      state.online = false;
-      console.warn('[store] falha ao gravar:', e.message);
+      // 401/403 numa escrita não é falta de rede: é sessão expirada ou
+      // revogada. Dizer "sem conexão" mandaria a pessoa procurar o problema
+      // no lugar errado.
+      if ((e.status === 401 || e.status === 403) && typeof Auth !== 'undefined') {
+        console.warn('[store] escrita recusada — sessão inválida');
+        await Auth.sair();
+        if (aoPerderSessao) aoPerderSessao();
+      } else {
+        state.online = false;
+        console.warn('[store] falha ao gravar:', e.message);
+      }
     }
     emitStatus();
   }
@@ -236,6 +274,7 @@ const Store = (() => {
   }
 
   function toggle(id) {
+    if (!podeEscrever()) return;
     if (state.plan[id]) {
       delete state.plan[id];
       queue('plan:' + id, () =>
@@ -249,6 +288,7 @@ const Store = (() => {
   }
 
   function setPeople(id, n) {
+    if (!podeEscrever()) return;
     const people = Math.max(1, Math.min(50, n | 0));
     if (!state.plan[id]) state.plan[id] = { people, courtesy: 0 };
     else {
@@ -262,6 +302,7 @@ const Store = (() => {
 
   /* Ingressos já garantidos com fornecedores: não entram na inscrição. */
   function setCourtesy(id, n) {
+    if (!podeEscrever()) return;
     const row = state.plan[id];
     if (!row) return;
     row.courtesy = Math.max(0, Math.min(row.people, n | 0));
@@ -269,6 +310,7 @@ const Store = (() => {
   }
 
   function clearPlan() {
+    if (!podeEscrever()) return;
     state.plan = {};
     queue('plan:*', () => rest('DELETE', 'eventos2027_plan?event_id=neq.__nada__'));
     lastLocalWrite = Date.now();
@@ -276,6 +318,7 @@ const Store = (() => {
   }
 
   function setBudget(limit) {
+    if (!podeEscrever()) return;
     state.budgetLimit = Number(limit) || 0;
     queueSettings();
     lastLocalWrite = Date.now();
@@ -283,6 +326,7 @@ const Store = (() => {
   }
 
   function setFx(fx) {
+    if (!podeEscrever()) return;
     state.fx = { ...state.fx, ...fx };
     queueSettings();
     lastLocalWrite = Date.now();
@@ -307,6 +351,7 @@ const Store = (() => {
   }
 
   async function criarEvento(dados) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     if (!configured()) throw new Error('offline');
     const id = novoId(dados.name);
     const linha = {
@@ -328,6 +373,7 @@ const Store = (() => {
   }
 
   async function removerEvento(id) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     const ev = state.events.find(e => e.id === id);
     // O catálogo curado não pode ser apagado pela interface.
     if (!ev || !ev.custom) throw new Error('nao-e-personalizado');
@@ -348,6 +394,7 @@ const Store = (() => {
   }
 
   async function restoreSnapshot(snap) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     const plano = snap.plano || {};
     if (!configured()) throw new Error('offline');
 
@@ -374,6 +421,7 @@ const Store = (() => {
 
   /* ─── cenários (snapshots nomeados) ────────────────────────────────────── */
   async function saveScenario(name, total) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     const payload = {
       name, author: author(), selections: state.plan,
       budget_limit: state.budgetLimit, fx: state.fx, total,
@@ -388,6 +436,7 @@ const Store = (() => {
   }
 
   async function applyScenario(s) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     state.plan = s.selections || {};
     state.budgetLimit = Number(s.budget_limit) || state.budgetLimit;
     if (s.fx) state.fx = s.fx;
@@ -408,6 +457,7 @@ const Store = (() => {
   }
 
   async function deleteScenario(id) {
+    if (!podeEscrever()) throw new Error('sem-permissao');
     if (!configured()) return;
     await rest('DELETE', `eventos2027_scenarios?id=eq.${encodeURIComponent(id)}`);
   }
@@ -419,7 +469,9 @@ const Store = (() => {
     criarEvento, removerEvento,
     listSnapshots, restoreSnapshot,
     saveScenario, listScenarios, applyScenario, deleteScenario,
-    author, setAuthor, configured,
+    author, setAuthor, configured, podeEscrever,
+    aoNegarEscrita: fn => { aoNegar = fn; },
+    aoPerderSessao: fn => { aoPerderSessao = fn; },
     onChange: fn => listeners.push(fn),
     onStatus: fn => statusListeners.push(fn),
   };

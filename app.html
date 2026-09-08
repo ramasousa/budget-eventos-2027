@@ -37,8 +37,12 @@
   <span class="sync-dot" id="syncDot"></span>
   <span class="sync-text" id="syncText">Carregando…</span>
   <span class="sync-spacer"></span>
-  <input type="text" class="ghost-input" id="authorInput" placeholder="Seu nome" style="width:120px" aria-label="Seu nome">
-  <button class="ghost-btn primary" id="btnNovoEvento">+ Adicionar evento</button>
+  <span class="sessao" id="sessaoInfo" hidden>
+    <span class="sessao-ponto"></span><span id="sessaoEmail"></span>
+  </span>
+  <button class="ghost-btn primary" id="btnEntrar">Entrar</button>
+  <button class="ghost-btn" id="btnSair" hidden>Sair</button>
+  <button class="ghost-btn primary" id="btnNovoEvento">+ Evento</button>
   <button class="ghost-btn" id="btnSaveScenario">Salvar cenário</button>
   <button class="ghost-btn" id="btnScenarios">Cenários</button>
   <button class="ghost-btn" id="btnPremissas">Premissas</button>
@@ -51,6 +55,13 @@
   <button class="tab" data-tab="calendario">Calendário 2027</button>
   <button class="tab" data-tab="consolidado">Consolidado<span class="tab-badge" id="tabCountSel" style="display:none">0</span></button>
 </nav>
+
+<div class="faixa-leitura" id="faixaLeitura">
+  <span class="faixa-leitura-icone" aria-hidden="true">◔</span>
+  <span><b>Somente leitura.</b> Você está vendo o orçamento compartilhado.
+    Para alterar qualquer coisa, entre com sua conta.</span>
+  <button class="ghost-btn primary" id="btnEntrarFaixa">Entrar</button>
+</div>
 
 <div class="layout">
   <main class="main">
@@ -240,11 +251,6 @@
       <input type="text" class="modal-input" id="premBudget" inputmode="numeric">
     </div>
 
-    <div class="modal-sec">
-      <div class="modal-k">Seu nome — aparece como autor das alterações</div>
-      <input type="text" class="modal-input" id="premAuthor" placeholder="Raul">
-    </div>
-
     <div class="note-box" style="font-size:12px">
       Passagens e hospedagem já estão em reais e são estimativas de planejamento.
       Ingressos de cortesia são marcados evento a evento, no card.
@@ -368,6 +374,36 @@
   </div>
 </div>
 
+<!-- ─── MODAL: ENTRAR ─────────────────────────────────────────────────────── -->
+<div class="overlay" id="modalLogin">
+  <div class="modal" style="width:440px">
+    <span class="eyebrow">Acesso</span>
+    <div class="modal-title">Entrar para editar</div>
+    <div class="modal-sub">
+      Qualquer pessoa com o link pode ver o orçamento. Alterar exige conta —
+      assim toda mudança fica assinada por quem a fez. As contas são criadas
+      pela superintendência; não há cadastro aberto.
+    </div>
+    <form id="formLogin" autocomplete="on" novalidate>
+      <div class="modal-sec">
+        <label class="campo"><span class="modal-k">E-mail</span>
+          <input class="modal-input" type="email" name="email" id="loginEmail"
+                 autocomplete="username" placeholder="voce@bradesco.com.br"></label>
+      </div>
+      <div class="modal-sec">
+        <label class="campo"><span class="modal-k">Senha</span>
+          <input class="modal-input" type="password" name="senha" id="loginSenha"
+                 autocomplete="current-password"></label>
+      </div>
+      <div class="login-erro" id="loginErro" hidden></div>
+      <div class="modal-foot">
+        <button type="submit" class="modal-btn primary" id="btnFazerLogin">Entrar</button>
+        <button type="button" class="modal-btn ghost" data-close>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
@@ -377,6 +413,7 @@
 <script src="assets/vendor/leaflet/leaflet-heat.js"></script>
 
 <script src="assets/js/config.js"></script>
+<script src="assets/js/auth.js"></script>
 <script src="assets/js/custo.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/cidades.js"></script>
@@ -424,14 +461,6 @@
   document.getElementById('btnCSV').onclick = exportCSV;
   document.getElementById('btnTXT').onclick = exportTXT;
 
-  /* autor */
-  const authorInput = document.getElementById('authorInput');
-  authorInput.value = Store.author() === 'anônimo' ? '' : Store.author();
-  authorInput.addEventListener('change', () => {
-    Store.setAuthor(authorInput.value.trim() || 'anônimo');
-    toast('Nome registrado. Suas próximas alterações aparecem assinadas.');
-  });
-
   /* modais */
   const open  = id => document.getElementById(id).classList.add('open');
   const close = id => document.getElementById(id).classList.remove('open');
@@ -449,7 +478,6 @@
     document.getElementById('fxEUR').value = Store.state.fx.EUR;
     document.getElementById('fxGBP').value = Store.state.fx.GBP;
     document.getElementById('premBudget').value = Store.state.budgetLimit.toLocaleString('pt-BR');
-    document.getElementById('premAuthor').value = Store.author() === 'anônimo' ? '' : Store.author();
     open('modalPremissas');
   };
   document.getElementById('btnSavePremissas').onclick = () => {
@@ -460,8 +488,6 @@
     }
     Store.setFx(fx);
     Store.setBudget(parseNum(document.getElementById('premBudget').value));
-    const nome = document.getElementById('premAuthor').value.trim();
-    if (nome) { Store.setAuthor(nome); authorInput.value = nome; }
     close('modalPremissas');
     toast('Premissas atualizadas para todos.');
   };
@@ -613,7 +639,86 @@
   /* garante gravação das pendências ao sair */
   window.addEventListener('beforeunload', () => Store.flush());
 
-  Store.init();
+  /* ─── SESSÃO ─────────────────────────────────────────────────────────── */
+  const modalLogin = document.getElementById('modalLogin');
+  const erroLogin = document.getElementById('loginErro');
+
+  function mostrarErro(msg) {
+    erroLogin.textContent = msg;
+    erroLogin.hidden = !msg;
+  }
+
+  function abrirLogin() {
+    mostrarErro('');
+    document.getElementById('formLogin').reset();
+    modalLogin.classList.add('open');
+    setTimeout(() => document.getElementById('loginEmail').focus(), 60);
+  }
+
+  document.getElementById('btnEntrar').onclick = abrirLogin;
+  document.getElementById('btnEntrarFaixa').onclick = abrirLogin;
+
+  document.getElementById('formLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btnFazerLogin');
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    if (!email || !senha) return mostrarErro('Informe e-mail e senha.');
+
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    mostrarErro('');
+    try {
+      await Auth.entrar(email, senha);
+      modalLogin.classList.remove('open');
+      toast('Você entrou. As alterações passam a ser assinadas por você.');
+      Store.poll();
+    } catch (err) {
+      // Mensagem genérica de propósito: não confirmamos se o e-mail existe.
+      mostrarErro(err.status === 400 || err.status === 401
+        ? 'E-mail ou senha incorretos.'
+        : 'Não foi possível entrar: ' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Entrar';
+    }
+  });
+
+  document.getElementById('btnSair').onclick = async () => {
+    await Auth.sair();
+    toast('Você saiu. A página volta ao modo somente leitura.');
+  };
+
+  /* Estado da sessão espelhado na interface. */
+  function aplicarSessao(st) {
+    document.body.classList.toggle('somente-leitura', !st.autenticado);
+    document.getElementById('faixaLeitura').hidden = st.autenticado;
+    document.getElementById('btnEntrar').hidden = st.autenticado;
+    document.getElementById('btnSair').hidden = !st.autenticado;
+    document.getElementById('sessaoInfo').hidden = !st.autenticado;
+    document.getElementById('sessaoEmail').textContent = st.email || '';
+    ['btnNovoEvento', 'btnSaveScenario'].forEach(id => {
+      document.getElementById(id).disabled = !st.autenticado;
+    });
+    render();
+  }
+  Auth.onMudanca(aplicarSessao);
+
+  /* Tentativa de escrita sem sessão: explica em vez de falhar em silêncio. */
+  Store.aoPerderSessao(() => {
+    toast('Sua sessão expirou. Entre de novo para continuar editando.', true);
+    abrirLogin();
+  });
+
+  Store.aoNegarEscrita(() => {
+    toast('Somente leitura — entre com sua conta para alterar.', true);
+    abrirLogin();
+  });
+
+  Auth.iniciar().then(st => {
+    aplicarSessao(st);
+    Store.init();
+    // Veio da capa pelo "Entrar para editar".
+    if (!st.autenticado && new URLSearchParams(location.search).has('entrar')) abrirLogin();
+  });
 })();
 </script>
 </body>

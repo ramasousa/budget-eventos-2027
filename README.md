@@ -163,22 +163,50 @@ página nem servidor de mapas. Tudo vem de `assets/vendor/`:
 
 Há um teste automatizado que falha se qualquer requisição externa reaparecer.
 
-#### O que ainda está aberto — e por quê
+#### Acesso: público lê, autenticado edita
 
-O site é público (GitHub Pages é público) e a policy de escrita é aberta.
-Ou seja: **quem tiver o link pode ler e alterar o plano**. Isso foi uma escolha
-consciente para o superintendente e os pares abrirem sem fricção, mas tem duas
-consequências que valem estar escritas:
+Qualquer pessoa com o link **vê** o orçamento — o superintendente abre e lê,
+sem senha, que é o caso da maioria. **Alterar** exige entrar com conta.
 
-- Não há controle de acesso. `robots.txt` e `noindex` mantêm a página fora dos
-  buscadores, o que é higiene, **não** segurança.
-- A autoria (`updated_by`) é texto livre digitado na página. Ela orienta, mas
-  não prova nada.
+Deslogada, a ferramenta fica explicitamente em somente-leitura: faixa de aviso
+no topo e controles de edição inertes. Isso é afordância; a garantia é a RLS no
+banco. Sem isso, alguém montaria um plano por cinco minutos para descobrir no
+fim que não podia salvar.
 
-Fechar isso de verdade exige autenticação. O caminho recomendado é
-**público lê, autenticado edita**: Supabase Auth por magic link ou SSO do
-domínio do banco, RLS de escrita passando de `using(true)` para
-`using(auth.role() = 'authenticated')`, e a autoria vindo do token.
+A autoria deixa de ser texto digitado e passa a vir do token, com o banco
+recusando gravação em nome de outra pessoa:
+
+```sql
+with check (updated_by = auth.jwt() ->> 'email')
+```
+
+Não há cadastro aberto nem recuperação de senha: são cinco pessoas, e cada
+porta a mais é superfície de ataque. As contas são criadas no painel.
+
+##### Como ativar
+
+A **ordem importa**. Fechar as policies antes de publicar o site tira a edição
+de quem estiver com a versão antiga aberta.
+
+1. **Criar as contas** — Supabase → Authentication → Users → *Add user*, com
+   *Auto Confirm User* ligado. Uma por pessoa que edita.
+2. **Desligar o cadastro aberto** — Authentication → Providers → Email →
+   *Allow new users to sign up* = **off**.
+3. **Publicar o site** com esta versão (merge na `main`).
+4. **Rodar** [`supabase/migracoes/01-fechar-escrita.sql`](supabase/migracoes/01-fechar-escrita.sql).
+
+Se travar: [`supabase/migracoes/01-rollback.sql`](supabase/migracoes/01-rollback.sql)
+devolve a escrita aberta em 30 segundos. A rede de segurança dos snapshots
+continua valendo nos dois estados.
+
+##### O que continua exposto
+
+A leitura. Os números seguem visíveis a quem tiver a URL — foi escolha
+consciente para não criar atrito com quem só lê. `robots.txt` e `noindex`
+mantêm a página fora dos buscadores, o que é higiene, não controle de acesso.
+
+Fechar também a leitura exigiria login para todo mundo, e a capa viraria tela
+de login.
 
 #### A rede de segurança que já existe
 
@@ -253,6 +281,7 @@ index.html                 a capa
 app.html                   a ferramenta: estrutura, modais e montagem
 assets/css/styles.css      design system
 assets/css/capa.css        estilos da capa
+assets/js/auth.js          sessão: público lê, autenticado edita
 assets/js/custo.js         cálculo de custo — fonte única das duas páginas
 assets/js/capa.js          números ao vivo e o mundo em matriz de pontos
 assets/js/config.js        URL e chave publishable do Supabase
@@ -268,6 +297,7 @@ assets/vendor/cidades/     3.7 mil praças com país, região e coordenada
 tools/gerar-mundo.js       regenera a geometria a partir do world-atlas
 tools/gerar-cidades.js     regenera a base de cidades
 supabase/schema.sql        tabelas, RLS e policies
+supabase/migracoes/        fechar a escrita e o rollback correspondente
 ```
 
 Sem build, sem `node_modules`, sem CDN. Abrir o `index.html` num servidor
