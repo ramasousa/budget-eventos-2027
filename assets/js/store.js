@@ -110,6 +110,7 @@ const Store = (() => {
       perDiem: Number(r.per_diem), days: r.days, transfer: Number(r.transfer),
       priority: r.priority, confidence: r.confidence, url: r.url,
       benefit: r.benefit, audience: r.audience, outcome: r.outcome,
+      custom: !!r.custom, createdBy: r.created_by,
     };
   }
 
@@ -296,6 +297,47 @@ const Store = (() => {
         'resolution=merge-duplicates'));
   }
 
+  /* ─── eventos incluídos pela equipe ────────────────────────────────────── */
+  function novoId(nome) {
+    const base = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'evento';
+    let id = base, n = 2;
+    while (state.events.some(e => e.id === id)) id = base + '-' + (n++);
+    return id;
+  }
+
+  async function criarEvento(dados) {
+    if (!configured()) throw new Error('offline');
+    const id = novoId(dados.name);
+    const linha = {
+      id, name: dados.name, edition: dados.edition || '2027',
+      category: dados.category, month_num: dados.monthNum, date_label: dados.dateLabel,
+      city: dados.city, country: dados.country, region: dados.region,
+      lat: dados.lat, lng: dados.lng,
+      ticket: dados.ticket, currency: dados.currency, passagem: dados.passagem,
+      hotel: dados.hotel, nights: dados.nights, per_diem: dados.perDiem,
+      days: dados.days, transfer: dados.transfer,
+      priority: dados.priority, confidence: dados.confidence, url: dados.url || null,
+      benefit: dados.benefit, audience: dados.audience, outcome: dados.outcome,
+      active: true, custom: true, created_by: author(),
+    };
+    await rest('POST', 'eventos2027_events', [linha]);
+    await pullEvents();
+    mirrorSave(); emit();
+    return id;
+  }
+
+  async function removerEvento(id) {
+    const ev = state.events.find(e => e.id === id);
+    // O catálogo curado não pode ser apagado pela interface.
+    if (!ev || !ev.custom) throw new Error('nao-e-personalizado');
+    if (!configured()) throw new Error('offline');
+    delete state.plan[id];
+    await rest('DELETE', `eventos2027_events?id=eq.${encodeURIComponent(id)}`);
+    await pullEvents();
+    mirrorSave(); emit();
+  }
+
   /* ─── cenários (snapshots nomeados) ────────────────────────────────────── */
   async function saveScenario(name, total) {
     const payload = {
@@ -340,6 +382,7 @@ const Store = (() => {
     state,
     init, poll, flush,
     toggle, setPeople, setCourtesy, clearPlan, setBudget, setFx,
+    criarEvento, removerEvento,
     saveScenario, listScenarios, applyScenario, deleteScenario,
     author, setAuthor, configured,
     onChange: fn => listeners.push(fn),

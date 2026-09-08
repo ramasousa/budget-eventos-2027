@@ -32,7 +32,8 @@
   <span class="sync-text" id="syncText">Carregando…</span>
   <span class="sync-spacer"></span>
   <input type="text" class="ghost-input" id="authorInput" placeholder="Seu nome" style="width:120px" aria-label="Seu nome">
-  <button class="ghost-btn primary" id="btnSaveScenario">Salvar cenário</button>
+  <button class="ghost-btn primary" id="btnNovoEvento">+ Adicionar evento</button>
+  <button class="ghost-btn" id="btnSaveScenario">Salvar cenário</button>
   <button class="ghost-btn" id="btnScenarios">Cenários</button>
   <button class="ghost-btn" id="btnPremissas">Premissas</button>
 </div>
@@ -242,6 +243,115 @@
   </div>
 </div>
 
+<!-- ─── MODAL: NOVO EVENTO ────────────────────────────────────────────────── -->
+<div class="overlay" id="modalEvento">
+  <div class="modal modal-wide">
+    <span class="eyebrow">Fora do catálogo</span>
+    <div class="modal-title">Adicionar evento</div>
+    <div class="modal-sub">
+      O catálogo não cobre tudo. Inclua aqui um evento que faça sentido para a
+      área — ele passa a valer para todo mundo que abrir a página, entra no mapa,
+      no calendário e no consolidado como qualquer outro.
+    </div>
+
+    <form id="formEvento" autocomplete="off" novalidate>
+      <div class="form-sec">
+        <span class="eyebrow">Identificação</span>
+        <div class="form-grid">
+          <label class="campo campo-2"><span class="modal-k">Nome do evento *</span>
+            <input class="modal-input" name="name" required maxlength="80" placeholder="ex: Open Banking Summit"></label>
+          <label class="campo"><span class="modal-k">Edição</span>
+            <input class="modal-input" name="edition" value="2027" maxlength="12"></label>
+          <label class="campo"><span class="modal-k">Frente temática *</span>
+            <select class="modal-input" name="category" required id="fCategoria"></select></label>
+          <label class="campo"><span class="modal-k">Prioridade</span>
+            <select class="modal-input" name="priority">
+              <option value="alta">Alta</option>
+              <option value="media" selected>Média</option>
+              <option value="baixa">Baixa</option>
+            </select></label>
+          <label class="campo"><span class="modal-k">Confiança da data</span>
+            <select class="modal-input" name="confidence">
+              <option value="confirmado">Confirmada</option>
+              <option value="estimado" selected>Estimada</option>
+              <option value="a_confirmar">A confirmar</option>
+            </select></label>
+        </div>
+      </div>
+
+      <div class="form-sec">
+        <span class="eyebrow">Onde e quando</span>
+        <div class="form-grid">
+          <label class="campo campo-2 cidade-wrap"><span class="modal-k">Cidade *</span>
+            <input class="modal-input" name="cidade" id="fCidade" placeholder="digite e escolha na lista">
+            <div class="ac-lista" id="acLista"></div>
+            <span class="campo-nota" id="fCidadeNota"></span></label>
+          <label class="campo"><span class="modal-k">Mês *</span>
+            <select class="modal-input" name="monthNum" required id="fMes"></select></label>
+          <label class="campo campo-2"><span class="modal-k">Quando, em palavras</span>
+            <input class="modal-input" name="dateLabel" maxlength="60" placeholder="ex: Início de março"></label>
+          <label class="campo campo-2"><span class="modal-k">Site do evento</span>
+            <input class="modal-input" name="url" type="url" placeholder="https://"></label>
+        </div>
+        <label class="check-linha">
+          <input type="checkbox" id="fSemSede">
+          <span>Sede ainda não definida — entra no orçamento, mas fica fora do mapa</span>
+        </label>
+      </div>
+
+      <div class="form-sec">
+        <span class="eyebrow">Custos por pessoa</span>
+        <div class="form-grid">
+          <label class="campo"><span class="modal-k">Passagem (R$) *</span>
+            <input class="modal-input" name="passagem" inputmode="numeric" required placeholder="8.000"></label>
+          <label class="campo"><span class="modal-k">Inscrição</span>
+            <input class="modal-input" name="ticket" inputmode="decimal" placeholder="1.200"></label>
+          <label class="campo"><span class="modal-k">Moeda</span>
+            <select class="modal-input" name="currency">
+              <option value="USD">USD</option><option value="EUR">EUR</option>
+              <option value="GBP">GBP</option><option value="BRL">BRL</option>
+            </select></label>
+          <label class="campo"><span class="modal-k">Hotel por noite (R$)</span>
+            <input class="modal-input" name="hotel" inputmode="numeric" placeholder="850"></label>
+          <label class="campo"><span class="modal-k">Noites</span>
+            <input class="modal-input" name="nights" inputmode="numeric" value="4"></label>
+          <label class="campo"><span class="modal-k">Diária / per diem (R$)</span>
+            <input class="modal-input" name="perDiem" inputmode="numeric" placeholder="400"></label>
+          <label class="campo"><span class="modal-k">Dias de evento</span>
+            <input class="modal-input" name="days" inputmode="numeric" value="3"></label>
+          <label class="campo"><span class="modal-k">Traslado (R$)</span>
+            <input class="modal-input" name="transfer" inputmode="numeric" placeholder="600"></label>
+        </div>
+      </div>
+
+      <div class="form-sec">
+        <span class="eyebrow">Por que ir</span>
+        <div class="form-grid">
+          <label class="campo campo-3"><span class="modal-k">Benefício estratégico *</span>
+            <textarea class="modal-input" name="benefit" rows="3" required maxlength="600"
+              placeholder="O que este evento entrega para a área que outro não entrega."></textarea></label>
+          <label class="campo campo-3"><span class="modal-k">Quem deve ir</span>
+            <textarea class="modal-input" name="audience" rows="2" maxlength="300"
+              placeholder="Perfil e senioridade de quem tira proveito."></textarea></label>
+          <label class="campo campo-3"><span class="modal-k">O que esperamos trazer</span>
+            <textarea class="modal-input" name="outcome" rows="2" maxlength="300"
+              placeholder="O resultado concreto que justifica o investimento."></textarea></label>
+        </div>
+      </div>
+
+      <div class="form-previa" id="fPrevia">
+        <span class="modal-k" style="margin:0">Custo estimado por pessoa</span>
+        <span class="form-previa-v" id="fPreviaValor">R$ 0</span>
+      </div>
+
+      <div class="modal-foot">
+        <button type="submit" class="modal-btn primary" id="btnSalvarEvento">Adicionar ao catálogo</button>
+        <button type="button" class="modal-btn ghost" data-close>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
@@ -252,6 +362,7 @@
 
 <script src="assets/js/config.js"></script>
 <script src="assets/js/data.js"></script>
+<script src="assets/js/cidades.js"></script>
 <script src="assets/js/store.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/map.js"></script>
@@ -337,6 +448,10 @@
     close('modalPremissas');
     toast('Premissas atualizadas para todos.');
   };
+
+  /* novo evento */
+  FormEvento.ligar();
+  document.getElementById('btnNovoEvento').onclick = () => FormEvento.abrir();
 
   /* cenários */
   document.getElementById('btnSaveScenario').onclick = async () => {

@@ -17,7 +17,7 @@ terceiros.
 
 | Aba | Para quê |
 |---|---|
-| **Catálogo** | 24 eventos com custo aberto por pessoa, benefício estratégico, perfil de quem deve ir e resultado esperado. Selecione e defina participantes. |
+| **Catálogo** | 24 eventos com custo aberto por pessoa, benefício estratégico, perfil de quem deve ir e resultado esperado. Selecione, defina participantes e **inclua eventos que faltam**. |
 | **Mapa de calor** | Onde o ecossistema se concentra (*Mercado*) versus onde estamos indo e quanto custa cada praça (*Nosso plano*). |
 | **Calendário 2027** | Distribuição no ano, custo por mês e alerta de concentração de ausências. |
 | **Consolidado** | Visão de apresentação: KPIs, composição de custo, distribuição geográfica e por trimestre, tabela detalhada e premissas. |
@@ -51,6 +51,27 @@ todo mundo; o stepper ao lado ajusta para cobertura parcial.
 A economia aparece no card, no painel lateral, num KPI próprio do consolidado
 e nas duas exportações.
 
+### Adicionar um evento que não está na lista
+
+O catálogo é um ponto de partida, não uma camisa de força. **+ Adicionar
+evento** abre um formulário que pede o mesmo que os eventos curados têm:
+custo aberto, benefício estratégico, quem deve ir e resultado esperado — a
+disciplina que sustenta a conversa com a diretoria vale para o que o time
+inclui também.
+
+A cidade é escolhida numa lista de 3.700 praças que já traz país, região e
+coordenada — ninguém precisa digitar latitude. A busca ignora acentos e
+aceita o nome em português ou no original ("Munique" ou "Munich"). Se a sede
+ainda não foi anunciada, há a opção *sede não definida*: o evento entra no
+orçamento e no calendário, e fica de fora do mapa.
+
+O custo por pessoa é calculado enquanto você digita, com o câmbio das
+Premissas. Ao salvar, o evento vale para todos e se comporta como qualquer
+outro — mapa, calendário, consolidado e exportações.
+
+Eventos incluídos pela equipe ficam marcados e podem ser removidos. Os 24
+curados não têm botão de remover, para ninguém apagar o catálogo por engano.
+
 ### Confiança das datas
 
 Datas e sedes de 2027 nem sempre são oficiais. Cada evento carrega um selo:
@@ -69,7 +90,7 @@ com prefixo `eventos2027_`:
 
 | Tabela | Papel |
 |---|---|
-| `eventos2027_events` | Catálogo. Editar custo de um evento = editar a linha aqui. |
+| `eventos2027_events` | Catálogo. Editar custo de um evento = editar a linha aqui. A coluna `custom` marca o que a equipe incluiu pela página. |
 | `eventos2027_plan` | **Plano vigente compartilhado** (evento, participantes, cortesias). É o que todos veem ao abrir. |
 | `eventos2027_settings` | Limite de orçamento e câmbio (linha única). |
 | `eventos2027_scenarios` | Cenários salvos — fotografias nomeadas para comparação. |
@@ -113,6 +134,7 @@ página nem servidor de mapas. Tudo vem de `assets/vendor/`:
 | Leaflet 1.9.4 + leaflet.heat 0.2.0 | ~210 KB · BSD |
 | Inter, Syne, JetBrains Mono (latin + latin-ext) | ~380 KB · OFL |
 | Geometria mundial Natural Earth 110m | ~170 KB · domínio público |
+| Base de cidades GeoNames (3.7 mil praças) | ~200 KB · CC BY · carregada sob demanda |
 
 Há um teste automatizado que falha se qualquer requisição externa reaparecer.
 
@@ -148,11 +170,12 @@ direto de lá; basta recarregar.
 
 ### Adicionar um evento
 
-Insira uma linha em `eventos2027_events`. Campos obrigatórios: `id`, `name`,
-`category` (`api`, `fin`, `tech`, `open`, `dev`, `ai`), `month_num`.
-Preencha `lat`/`lng` para o evento aparecer no mapa.
+Pelo botão **+ Adicionar evento** na própria página — é o caminho normal.
 
-Para que o evento também exista no modo offline, replique-o em
+Direto no banco, se preferir: insira uma linha em `eventos2027_events`.
+Campos obrigatórios: `id`, `name`, `category` (`api`, `fin`, `tech`, `open`,
+`dev`, `ai`), `month_num`. Preencha `lat`/`lng` para o evento aparecer no
+mapa. Para que ele também exista no modo offline, replique-o em
 `assets/js/data.js`.
 
 ### Mudar o câmbio ou o limite
@@ -178,8 +201,11 @@ assets/js/app.js           cálculo de custo, views e exportações
 assets/js/map.js           mapa de calor + modo autônomo
 assets/vendor/leaflet/     Leaflet 1.9.4 + leaflet.heat (BSD)
 assets/vendor/fonts/       Inter, Syne, JetBrains Mono (OFL)
+assets/js/cidades.js       autocomplete de cidades (carregado sob demanda)
 assets/vendor/world/       geometria mundial Natural Earth 110m (domínio público)
+assets/vendor/cidades/     3.7 mil praças com país, região e coordenada
 tools/gerar-mundo.js       regenera a geometria a partir do world-atlas
+tools/gerar-cidades.js     regenera a base de cidades
 supabase/schema.sql        tabelas, RLS e policies
 ```
 
@@ -209,3 +235,24 @@ SCRATCH=<pasta-com-os-pacotes> node tools/gerar-mundo.js
 O script corta os polígonos no antimeridiano. Sem isso, Fiji e a Rússia — que
 têm território dos dois lados da linha de data — são desenhados como faixas
 horizontais atravessando o mapa inteiro.
+
+## A base de cidades
+
+Alimenta o autocomplete do formulário de novo evento. Vem do GeoNames, via
+`all-the-cities`, cruzada com `world-countries` para o nome do país em
+português e a região.
+
+```bash
+npm pack all-the-cities@3 world-countries pbf@3 ieee754
+SCRATCH=<pasta-com-os-pacotes> node tools/gerar-cidades.js
+```
+
+O corte é por população (120 mil), com duas correções necessárias:
+
+- **Homônimas pequenas.** "Cologne" com 7 mil habitantes é uma cidade de
+  Minnesota, não a Colônia alemã; o corte por população resolve.
+- **Sedes de evento pequenas demais.** Davos, Cannes e Palo Alto ficariam de
+  fora, então entram por uma lista explícita no script.
+
+Os nomes em português são um mapa manual conferido contra o dataset — ele usa
+"Munich", "Köln" e "New York City", não os nomes que se espera digitar.

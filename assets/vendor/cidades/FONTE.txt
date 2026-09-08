@@ -1,0 +1,8 @@
+Base de cidades do autocomplete de "Adicionar evento".
+
+Origem: GeoNames (https://www.geonames.org) via o pacote npm all-the-cities,
+cruzada com world-countries para nome do país em português e região.
+
+Licença dos dados: Creative Commons Attribution 4.0 (CC BY 4.0) — GeoNames.
+
+Regenerar: veja tools/gerar-cidades.js e a seção "A base de cidades" do README.

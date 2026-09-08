@@ -710,3 +710,73 @@ a { color: inherit; }
 
 /* Símbolo da moeda nos números grandes: menor que o valor, sem competir. */
 .kpi-v .cur, .rail-total-v .cur, .acc-foot-v .cur { font-size: .58em; opacity: .72; letter-spacing: 0; }
+
+/* ─── FORMULÁRIO DE NOVO EVENTO ──────────────────────────────────────────── */
+.modal-wide { width: 720px; }
+.form-sec { margin-bottom: 24px; }
+.form-sec .eyebrow { margin-bottom: 14px; }
+.form-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.campo { display: flex; flex-direction: column; min-width: 0; position: relative; }
+.campo-2 { grid-column: span 2; }
+.campo-3 { grid-column: 1 / -1; }
+.campo .modal-k { margin-bottom: 6px; }
+.campo textarea.modal-input { resize: vertical; line-height: 1.6; font-family: var(--body); }
+.campo-nota { font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); margin-top: 6px; min-height: 12px; }
+.campo-nota.ok { color: var(--green-d); }
+.campo-nota.err { color: var(--red); }
+.modal-input:invalid:not(:placeholder-shown) { border-color: var(--red-line); }
+
+.check-linha { display: flex; align-items: center; gap: 9px; margin-top: 12px;
+  font-size: 12px; font-weight: 300; color: var(--ink-3); cursor: pointer; }
+.check-linha input { accent-color: var(--red); width: 15px; height: 15px; }
+
+/* autocomplete */
+.cidade-wrap { position: relative; }
+.ac-lista {
+  display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  background: var(--white); border: 1px solid var(--cream-3); border-radius: 4px;
+  margin-top: 4px; max-height: 236px; overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(11,18,25,.14);
+}
+.ac-lista.open { display: block; }
+.ac-item { display: flex; align-items: baseline; gap: 9px; width: 100%;
+  padding: 9px 12px; text-align: left; font-size: 12.5px; color: var(--ink-2);
+  border-bottom: 1px solid var(--cream-2); transition: background .2s var(--ease); }
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item.sel { background: var(--cream); }
+.ac-cidade { font-weight: 500; }
+.ac-pais { font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); margin-left: auto; }
+.ac-vazio { padding: 12px; font-size: 12px; font-weight: 300; color: var(--ink-4); }
+
+/* prévia do custo */
+.form-previa {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px; background: var(--ink); border-radius: 4px;
+  position: relative; overflow: hidden; margin-top: 4px;
+}
+.form-previa > * { position: relative; z-index: 1; }
+.form-previa .modal-k { color: var(--ink-4); }
+.form-previa-v { font-family: var(--display); font-weight: 800; font-size: 24px;
+  letter-spacing: -.05em; color: var(--cream); }
+.form-previa-v .cur { font-size: .58em; opacity: .72; letter-spacing: 0; }
+
+/* marca de evento incluído pela equipe */
+.card-custom-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--cream-2); }
+.btn-remover { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  padding: 4px 10px; border-radius: 4px; border: 1px solid var(--cream-3);
+  color: var(--ink-4); margin-left: auto; transition: all .3s var(--ease); }
+.btn-remover:hover { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+
+@media (max-width: 680px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .campo-2, .campo-3 { grid-column: 1 / -1; }
+  .modal-wide { width: 100%; }
+}
+
+/* Destaque momentâneo do card recém-criado, para o usuário achá-lo na grade. */
+.event-card.recem-criado { animation: recemCriado 2.4s var(--ease); }
+@keyframes recemCriado {
+  0%, 55% { box-shadow: 0 0 0 3px var(--red-br), 0 16px 40px rgba(11,18,25,.16); }
+  100%    { box-shadow: 0 0 0 0 transparent; }
+}

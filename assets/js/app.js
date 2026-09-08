@@ -217,13 +217,22 @@ function renderCatalog() {
           </span>
           ${temCortesia ? `<span class="courtesy-save">Economia de ${brl(atual.economia)} em inscrições</span>` : ''}
         </div>
+
+        ${ev.custom ? `
+        <div class="card-custom-bar">
+          <span class="badge badge-blue">Incluído pela equipe</span>
+          ${ev.createdBy && ev.createdBy !== 'anônimo'
+            ? `<span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-4)">por ${esc(ev.createdBy)}</span>` : ''}
+          <button class="btn-remover" data-remover="${esc(ev.id)}">Remover</button>
+        </div>` : ''}
       </div>
     </article>`;
   }).join('');
 
   grid.querySelectorAll('[data-toggle]').forEach(el => {
     el.addEventListener('click', e => {
-      if (e.target.closest('.step-btn') || e.target.closest('[data-courtesy-toggle]')) return;
+      if (e.target.closest('.step-btn') || e.target.closest('[data-courtesy-toggle]')
+          || e.target.closest('[data-remover]')) return;
       Store.toggle(el.dataset.toggle);
     });
   });
@@ -239,6 +248,12 @@ function renderCatalog() {
       e.stopPropagation();
       const cur = (planOf(b.dataset.id) || { courtesy: 0 }).courtesy;
       Store.setCourtesy(b.dataset.id, cur + Number(b.dataset.cort));
+    });
+  });
+  grid.querySelectorAll('[data-remover]').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      removerEventoPersonalizado(b.dataset.remover);
     });
   });
   grid.querySelectorAll('[data-courtesy-toggle]').forEach(b => {
@@ -641,4 +656,224 @@ PREMISSAS
 `;
   download('orcamento-eventos-2027.txt', txt, 'text/plain');
   toast('Resumo exportado.');
+}
+
+/* ─── FORMULÁRIO DE NOVO EVENTO ──────────────────────────────────────────── */
+const FormEvento = (() => {
+  let cidadeEscolhida = null;
+  let sugestoes = [];
+  let indiceSel = -1;
+
+  const $ = id => document.getElementById(id);
+  const form = () => $('formEvento');
+
+  function abrir() {
+    const f = form();
+    f.reset();
+    cidadeEscolhida = null;
+    $('fCidade').value = '';
+    $('fSemSede').checked = false;
+    nota('');
+    fecharLista();
+
+    $('fCategoria').innerHTML = Object.entries(CATEGORIES)
+      .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join('');
+    $('fMes').innerHTML = Array.from({ length: 12 }, (_, i) => i + 1)
+      .map(m => `<option value="${m}">${MONTHS[m]} · T${Math.ceil(m / 3)}</option>`).join('');
+
+    previa();
+    document.getElementById('modalEvento').classList.add('open');
+    setTimeout(() => f.elements.name.focus(), 60);
+
+    // A base de cidades só é baixada quando o formulário abre de fato.
+    Cidades.carregar().catch(() => nota('Não foi possível carregar a lista de cidades.', 'err'));
+  }
+
+  function nota(txt, tipo) {
+    const el = $('fCidadeNota');
+    el.textContent = txt;
+    el.className = 'campo-nota' + (tipo ? ' ' + tipo : '');
+  }
+
+  function fecharLista() {
+    $('acLista').classList.remove('open');
+    indiceSel = -1;
+  }
+
+  function renderLista() {
+    const el = $('acLista');
+    if (!sugestoes.length) {
+      el.innerHTML = Cidades.pronto
+        ? '<div class="ac-vazio">Nenhuma cidade encontrada. Se a sede ainda não está definida, marque a opção abaixo.</div>'
+        : '<div class="ac-vazio">Carregando cidades…</div>';
+      el.classList.add('open');
+      return;
+    }
+    el.innerHTML = sugestoes.map((c, i) => `
+      <button type="button" class="ac-item ${i === indiceSel ? 'sel' : ''}" data-ac="${i}">
+        <span class="ac-cidade">${esc(c.nome)}</span>
+        <span class="ac-pais">${esc(c.pais)} · ${esc(c.regiao)}</span>
+      </button>`).join('');
+    el.classList.add('open');
+    el.querySelectorAll('[data-ac]').forEach(b =>
+      b.onclick = () => escolher(sugestoes[Number(b.dataset.ac)]));
+  }
+
+  function escolher(c) {
+    cidadeEscolhida = c;
+    $('fCidade').value = c.nome;
+    $('fSemSede').checked = false;
+    nota(`${c.pais} · ${c.regiao} · ${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`, 'ok');
+    fecharLista();
+  }
+
+  function buscar() {
+    const termo = $('fCidade').value;
+    if (cidadeEscolhida && termo !== cidadeEscolhida.nome) { cidadeEscolhida = null; nota(''); }
+    if (termo.trim().length < 2) { fecharLista(); return; }
+    sugestoes = Cidades.buscar(termo);
+    indiceSel = -1;
+    renderLista();
+  }
+
+  const num = v => Number(String(v ?? '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+
+  function valores() {
+    const d = Object.fromEntries(new FormData(form()).entries());
+    return {
+      name: (d.name || '').trim(),
+      edition: (d.edition || '').trim(),
+      category: d.category,
+      monthNum: Number(d.monthNum),
+      dateLabel: (d.dateLabel || '').trim(),
+      url: (d.url || '').trim(),
+      ticket: num(d.ticket), currency: d.currency,
+      passagem: num(d.passagem), hotel: num(d.hotel), nights: num(d.nights),
+      perDiem: num(d.perDiem), days: num(d.days), transfer: num(d.transfer),
+      priority: d.priority, confidence: d.confidence,
+      benefit: (d.benefit || '').trim(),
+      audience: (d.audience || '').trim(),
+      outcome: (d.outcome || '').trim(),
+    };
+  }
+
+  function previa() {
+    const v = valores();
+    // BRL não passa por câmbio; as demais usam a taxa das Premissas.
+    const taxa = v.currency === 'BRL' ? 1 : fxRate(v.currency);
+    const total = v.passagem + v.ticket * taxa + v.hotel * v.nights
+                + v.perDiem * v.days + v.transfer;
+    $('fPreviaValor').innerHTML = brlBig(total);
+  }
+
+  async function salvar(e) {
+    e.preventDefault();
+    const v = valores();
+    const btn = $('btnSalvarEvento');
+
+    const falta = (campo, msg) => {
+      const el = form().elements[campo];
+      if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      toast(msg, true);
+    };
+    if (!v.name) return falta('name', 'Dê um nome ao evento.');
+    if (!v.benefit) return falta('benefit', 'Descreva o benefício — é o que sustenta a decisão de gastar.');
+
+    const semSede = $('fSemSede').checked;
+    if (!semSede && !cidadeEscolhida) {
+      nota('Escolha uma cidade na lista, ou marque "sede ainda não definida".', 'err');
+      return toast('Escolha a cidade na lista.', true);
+    }
+    if (!v.passagem && !semSede) {
+      return falta('passagem', 'Informe ao menos o custo da passagem.');
+    }
+
+    // Inscrição em BRL entra como valor já convertido, com câmbio 1.
+    if (v.currency === 'BRL') { v.currency = 'USD'; v.ticket = v.ticket / (fxRate('USD') || 1); }
+
+    Object.assign(v, semSede
+      ? { city: 'Sede a confirmar', country: '—', region: '—', lat: null, lng: null,
+          confidence: 'a_confirmar' }
+      : { city: cidadeEscolhida.nome, country: cidadeEscolhida.pais,
+          region: cidadeEscolhida.regiao, lat: cidadeEscolhida.lat, lng: cidadeEscolhida.lng });
+
+    btn.disabled = true;
+    btn.textContent = 'Adicionando…';
+    try {
+      const id = await Store.criarEvento(v);
+      document.getElementById('modalEvento').classList.remove('open');
+      toast(`"${v.name}" entrou no catálogo — visível para todo mundo.`);
+      // Leva o usuário até o card recém-criado.
+      ui.cat = 'all'; ui.priority = 'all'; ui.search = ''; ui.onlySelected = false;
+      document.getElementById('searchInput').value = '';
+      switchTab('catalogo');
+      render();
+      setTimeout(() => {
+        const card = document.querySelector(`.event-card[data-id="${id}"]`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('recem-criado');
+          setTimeout(() => card.classList.remove('recem-criado'), 2400);
+        }
+      }, 120);
+    } catch (err) {
+      toast(err.message === 'offline'
+        ? 'Sem conexão com o banco — o evento não pôde ser compartilhado.'
+        : 'Não foi possível adicionar o evento.', true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Adicionar ao catálogo';
+    }
+  }
+
+  function ligar() {
+    const f = form();
+    f.addEventListener('submit', salvar);
+    f.addEventListener('input', previa);
+
+    const inp = $('fCidade');
+    inp.addEventListener('input', buscar);
+    inp.addEventListener('focus', () => { if (inp.value.trim().length >= 2) buscar(); });
+    inp.addEventListener('keydown', e => {
+      const lista = $('acLista');
+      if (!lista.classList.contains('open') || !sugestoes.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        indiceSel = (indiceSel + (e.key === 'ArrowDown' ? 1 : -1) + sugestoes.length) % sugestoes.length;
+        renderLista();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        escolher(sugestoes[Math.max(0, indiceSel)]);
+      } else if (e.key === 'Escape') {
+        fecharLista();
+      }
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.cidade-wrap')) fecharLista();
+    });
+
+    $('fSemSede').addEventListener('change', e => {
+      if (e.target.checked) {
+        cidadeEscolhida = null;
+        inp.value = '';
+        nota('O evento entra no orçamento e no calendário, mas não no mapa.');
+        fecharLista();
+      } else nota('');
+    });
+  }
+
+  return { abrir, ligar };
+})();
+
+/* Remoção — só vale para eventos incluídos pela equipe. */
+async function removerEventoPersonalizado(id) {
+  const ev = Store.state.events.find(e => e.id === id);
+  if (!ev) return;
+  if (!confirm(`Remover "${ev.name}" do catálogo? Isso vale para todos que abrirem a página.`)) return;
+  try {
+    await Store.removerEvento(id);
+    toast(`"${ev.name}" removido do catálogo.`);
+  } catch (e) {
+    toast('Não foi possível remover o evento.', true);
+  }
 }

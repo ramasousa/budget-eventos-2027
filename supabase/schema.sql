@@ -38,8 +38,19 @@ create table if not exists eventos2027_events (
   audience      text,
   outcome       text,
   active        boolean not null default true,
+  -- true = evento incluído pela equipe pela própria página. A flag separa o
+  -- catálogo curado, que ninguém deve apagar por engano, do que o time inclui.
+  custom        boolean not null default false,
+  created_by    text,
+  created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+create index if not exists eventos2027_events_custom_idx on eventos2027_events (custom);
+
+-- Migração para bases criadas antes destas colunas existirem.
+alter table eventos2027_events add column if not exists custom boolean not null default false;
+alter table eventos2027_events add column if not exists created_by text;
+alter table eventos2027_events add column if not exists created_at timestamptz not null default now();
 comment on table eventos2027_events is
   'Catálogo de eventos internacionais candidatos ao orçamento 2027. Custos por pessoa; passagem/hotel em BRL, inscrição na moeda de origem.';
 
