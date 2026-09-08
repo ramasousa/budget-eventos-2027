@@ -780,3 +780,13 @@ a { color: inherit; }
   0%, 55% { box-shadow: 0 0 0 3px var(--red-br), 0 16px 40px rgba(11,18,25,.16); }
   100%    { box-shadow: 0 0 0 0 transparent; }
 }
+
+/* Excluir cenário — discreto, ao lado de Carregar. */
+.scn-del {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 4px;
+  border: 1px solid var(--cream-3); color: var(--ink-4); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s var(--ease);
+}
+.scn-del:hover { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+.scn-del:disabled { opacity: .5; cursor: default; }

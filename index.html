@@ -467,28 +467,26 @@
     }
   };
 
-  document.getElementById('btnScenarios').onclick = async () => {
+  async function renderCenarios() {
     const host = document.getElementById('scenarioList');
-    host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Carregando…</div>';
-    open('modalScenarios');
+    const vazio = txt => `<div style="font-size:12.5px;font-weight:300;color:var(--ink-3);padding:12px 0">${txt}</div>`;
+    host.innerHTML = vazio('Carregando…');
+
     let list = [];
     try { list = await Store.listScenarios(); }
-    catch (e) {
-      host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Não foi possível carregar os cenários (sem conexão com o banco).</div>';
-      return;
-    }
-    if (!list.length) {
-      host.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:0.5rem 0">Nenhum cenário salvo ainda.</div>';
-      return;
-    }
+    catch (e) { host.innerHTML = vazio('Não foi possível carregar os cenários (sem conexão com o banco).'); return; }
+    if (!list.length) { host.innerHTML = vazio('Nenhum cenário salvo ainda.'); return; }
+
     host.innerHTML = list.map(s => `
       <div class="scn-row">
         <div class="scn-name">${esc(s.name)}
-          <div class="scn-meta">${esc(s.author || 'anônimo')} · ${new Date(s.created_at).toLocaleDateString('pt-BR')} · ${Object.keys(s.selections || {}).length} eventos</div>
+          <div class="scn-meta">${esc(s.author || 'anônimo')} · ${new Date(s.created_at).toLocaleDateString('pt-BR')} · ${(n => `${n} ${n === 1 ? 'evento' : 'eventos'}`)(Object.keys(s.selections || {}).length)}</div>
         </div>
         <span class="scn-total">${brl(s.total || 0)}</span>
         <button class="scn-load" data-load="${esc(s.id)}">Carregar</button>
+        <button class="scn-del" data-del="${esc(s.id)}" title="Excluir cenário" aria-label="Excluir cenário">✕</button>
       </div>`).join('');
+
     host.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
       const s = list.find(x => x.id === b.dataset.load);
       if (!s) return;
@@ -502,6 +500,28 @@
         toast('Cenário aplicado localmente, mas houve falha ao propagar.', true);
       }
     });
+
+    host.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      const s = list.find(x => x.id === b.dataset.del);
+      if (!s) return;
+      // Apagar um cenário não mexe no plano vigente — é só a fotografia que sai.
+      if (!confirm(`Excluir o cenário "${s.name}"?\n\nIsso apaga a fotografia salva para todos. O orçamento em uso continua como está.`)) return;
+      b.disabled = true;
+      b.textContent = '…';
+      try {
+        await Store.deleteScenario(s.id);
+        toast('Cenário "' + s.name + '" excluído.');
+        renderCenarios();
+      } catch (e) {
+        b.disabled = false; b.textContent = '✕';
+        toast('Não foi possível excluir o cenário.', true);
+      }
+    });
+  }
+
+  document.getElementById('btnScenarios').onclick = () => {
+    open('modalScenarios');
+    renderCenarios();
   };
 
   /* modos do mapa */

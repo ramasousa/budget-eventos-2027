@@ -72,6 +72,17 @@ outro — mapa, calendário, consolidado e exportações.
 Eventos incluídos pela equipe ficam marcados e podem ser removidos. Os 24
 curados não têm botão de remover, para ninguém apagar o catálogo por engano.
 
+### Cenários
+
+**Salvar cenário** guarda uma fotografia do orçamento: quais eventos, quantas
+pessoas, quantas cortesias, qual limite e qual câmbio. Serve para comparar
+alternativas — "plano cheio" contra "plano enxuto" — sem perder nenhuma das
+duas.
+
+Em **Cenários** ficam os salvos. *Carregar* substitui o plano compartilhado
+atual pelo do cenário, para todos. O **✕** exclui a fotografia; o orçamento em
+uso não é tocado.
+
 ### Confiança das datas
 
 Datas e sedes de 2027 nem sempre são oficiais. Cada evento carrega um selo:
