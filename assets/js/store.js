@@ -338,6 +338,40 @@ const Store = (() => {
     mirrorSave(); emit();
   }
 
+  /* ─── histórico automático ─────────────────────────────────────────────
+     Escrito por trigger no banco, não pelo cliente — um atacante não usa o
+     nosso código. Aqui só lemos e restauramos.
+     ─────────────────────────────────────────────────────────────────────── */
+  async function listSnapshots() {
+    if (!configured()) return [];
+    return rest('GET', 'eventos2027_snapshots?select=*&order=taken_at.desc&limit=20');
+  }
+
+  async function restoreSnapshot(snap) {
+    const plano = snap.plano || {};
+    if (!configured()) throw new Error('offline');
+
+    // O DELETE abaixo dispara o trigger, que guarda o estado atual antes de
+    // sumir: restaurar por engano também é reversível.
+    await rest('DELETE', 'eventos2027_plan?event_id=neq.__nada__');
+    const rows = Object.entries(plano).map(([event_id, v]) => ({
+      event_id, people: v.people, courtesy: v.courtesy || 0,
+      updated_by: author(), updated_at: new Date().toISOString(),
+    }));
+    if (rows.length) {
+      await rest('POST', 'eventos2027_plan?on_conflict=event_id', rows, 'resolution=merge-duplicates');
+    }
+    if (snap.budget_limit != null) state.budgetLimit = Number(snap.budget_limit);
+    if (snap.fx) state.fx = snap.fx;
+    state.plan = {};
+    Object.entries(plano).forEach(([id, v]) => {
+      state.plan[id] = { people: v.people, courtesy: v.courtesy || 0 };
+    });
+    queueSettings();
+    lastLocalWrite = Date.now();
+    mirrorSave(); emit();
+  }
+
   /* ─── cenários (snapshots nomeados) ────────────────────────────────────── */
   async function saveScenario(name, total) {
     const payload = {
@@ -383,6 +417,7 @@ const Store = (() => {
     init, poll, flush,
     toggle, setPeople, setCourtesy, clearPlan, setBudget, setFx,
     criarEvento, removerEvento,
+    listSnapshots, restoreSnapshot,
     saveScenario, listScenarios, applyScenario, deleteScenario,
     author, setAuthor, configured,
     onChange: fn => listeners.push(fn),

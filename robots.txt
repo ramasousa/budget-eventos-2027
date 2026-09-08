@@ -1,0 +1,7 @@
+# Orçamento interno da superintendência Open Platform & BaaS.
+# A página é pública porque o GitHub Pages é público, mas não deve ser
+# indexada por buscadores. Isso não é controle de acesso — é higiene:
+# quem tiver o link continua vendo. O controle de acesso de verdade
+# depende de autenticação (ver README, seção Segurança).
+User-agent: *
+Disallow: /

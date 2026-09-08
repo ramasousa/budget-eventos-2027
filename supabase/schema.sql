@@ -125,3 +125,97 @@ end $$;
 insert into eventos2027_settings (id, budget_limit, updated_by)
 values (1, 300000, 'setup')
 on conflict (id) do nothing;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- REDE DE SEGURANÇA CONTRA APAGAMENTO
+--
+-- A chave publishable está num repositório público e a policy de escrita é
+-- aberta: qualquer pessoa com o link pode apagar o plano inteiro com uma
+-- chamada. Não dá para impedir pela RLS sem quebrar a desseleção de um evento
+-- (que também é DELETE). A defesa é garantir recuperação.
+--
+-- O snapshot é tirado por TRIGGER no banco, não pelo cliente — um atacante não
+-- usa o nosso JavaScript. E a tabela é somente-leitura para anon, então a
+-- trilha não pode ser destruída junto com o plano.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists eventos2027_snapshots (
+  id             bigserial primary key,
+  taken_at       timestamptz not null default now(),
+  motivo         text not null,          -- 'antes_de_apagar' | 'checkpoint'
+  plano          jsonb not null,
+  budget_limit   numeric,
+  fx             jsonb,
+  eventos        int,
+  participacoes  int
+);
+create index if not exists eventos2027_snapshots_taken_idx
+  on eventos2027_snapshots (taken_at desc);
+
+create or replace function eventos2027_tirar_snapshot(p_motivo text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_plano jsonb; v_ultimo jsonb; v_limit numeric; v_fx jsonb;
+begin
+  select coalesce(jsonb_object_agg(event_id,
+           jsonb_build_object('people', people, 'courtesy', courtesy)), '{}'::jsonb)
+    into v_plano from eventos2027_plan;
+  if v_plano = '{}'::jsonb then return; end if;   -- plano vazio: nada a proteger
+
+  -- Sem deduplicar, uma sequência de desseleções enche a janela de 60 com
+  -- estados repetidos e expulsa os pontos de retorno que importam.
+  select plano into v_ultimo from eventos2027_snapshots order by taken_at desc limit 1;
+  if v_ultimo is not null and v_ultimo = v_plano then return; end if;
+
+  select budget_limit, fx into v_limit, v_fx from eventos2027_settings where id = 1;
+
+  insert into eventos2027_snapshots (motivo, plano, budget_limit, fx, eventos, participacoes)
+  values (p_motivo, v_plano, v_limit, v_fx,
+          (select count(*) from eventos2027_plan),
+          (select coalesce(sum(people), 0) from eventos2027_plan));
+
+  delete from eventos2027_snapshots
+   where id not in (select id from eventos2027_snapshots order by taken_at desc limit 60);
+end $$;
+
+-- BEFORE DELETE: a tabela ainda tem as linhas, então guarda exatamente o que
+-- estava prestes a ser perdido.
+create or replace function eventos2027_trg_antes_de_apagar()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin perform eventos2027_tirar_snapshot('antes_de_apagar'); return null; end $$;
+
+-- Checkpoint do estado bom, no máximo um a cada 10 min.
+create or replace function eventos2027_trg_checkpoint()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare v_ultimo timestamptz;
+begin
+  select max(taken_at) into v_ultimo from eventos2027_snapshots;
+  if v_ultimo is null or v_ultimo < now() - interval '10 minutes' then
+    perform eventos2027_tirar_snapshot('checkpoint');
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists eventos2027_plan_antes_de_apagar on eventos2027_plan;
+create trigger eventos2027_plan_antes_de_apagar
+  before delete on eventos2027_plan
+  for each statement execute function eventos2027_trg_antes_de_apagar();
+
+drop trigger if exists eventos2027_plan_checkpoint on eventos2027_plan;
+create trigger eventos2027_plan_checkpoint
+  after insert or update on eventos2027_plan
+  for each statement execute function eventos2027_trg_checkpoint();
+
+-- anon LÊ (para restaurar), mas não escreve nem apaga.
+alter table eventos2027_snapshots enable row level security;
+drop policy if exists "anon read"  on eventos2027_snapshots;
+drop policy if exists "anon write" on eventos2027_snapshots;
+create policy "anon read" on eventos2027_snapshots for select using (true);
+
+-- OBRIGATÓRIO: o PostgREST expõe toda função do schema public como
+-- /rest/v1/rpc/<nome>. Sem este revoke, um atacante chamaria a função em loop
+-- e expulsaria os pontos legítimos da janela de 60 — apagando a trilha sem
+-- executar um único DELETE. Os gatilhos continuam funcionando: o Postgres não
+-- exige EXECUTE do usuário para rodar a função de um trigger.
+revoke all on function eventos2027_tirar_snapshot(text)  from public, anon, authenticated;
+revoke all on function eventos2027_trg_antes_de_apagar() from public, anon, authenticated;
+revoke all on function eventos2027_trg_checkpoint()      from public, anon, authenticated;

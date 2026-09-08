@@ -72,7 +72,7 @@ outro — mapa, calendário, consolidado e exportações.
 Eventos incluídos pela equipe ficam marcados e podem ser removidos. Os 24
 curados não têm botão de remover, para ninguém apagar o catálogo por engano.
 
-### Cenários
+### Cenários e histórico
 
 **Salvar cenário** guarda uma fotografia do orçamento: quais eventos, quantas
 pessoas, quantas cortesias, qual limite e qual câmbio. Serve para comparar
@@ -82,6 +82,11 @@ duas.
 Em **Cenários** ficam os salvos. *Carregar* substitui o plano compartilhado
 atual pelo do cenário, para todos. O **✕** exclui a fotografia; o orçamento em
 uso não é tocado.
+
+Abaixo, o **histórico automático**: o banco guarda o estado do plano sozinho,
+sempre antes de qualquer exclusão e a cada 10 minutos de uso. É a rede de
+segurança contra apagamento acidental — ou malicioso. Restaurar também gera um
+ponto de retorno, então nada ali é irreversível.
 
 ### Confiança das datas
 
@@ -131,11 +136,6 @@ A chave em `assets/js/config.js` é a **publishable (anon) key** — feita para
 ficar no front-end e protegida por Row Level Security. A `service_role` key
 nunca deve entrar neste repositório.
 
-As policies hoje liberam leitura e escrita para quem tem o link, decisão
-consciente: não há dado sensível, apenas estimativas de custo de eventos
-públicos. Para restringir, altere as policies em [`supabase/schema.sql`](supabase/schema.sql)
-e reaplique.
-
 Depois de carregada, a página faz chamadas de rede **apenas ao Supabase**.
 Não há CDN de terceiros, hash SRI para manter, script externo executando na
 página nem servidor de mapas. Tudo vem de `assets/vendor/`:
@@ -149,7 +149,39 @@ página nem servidor de mapas. Tudo vem de `assets/vendor/`:
 
 Há um teste automatizado que falha se qualquer requisição externa reaparecer.
 
----
+#### O que ainda está aberto — e por quê
+
+O site é público (GitHub Pages é público) e a policy de escrita é aberta.
+Ou seja: **quem tiver o link pode ler e alterar o plano**. Isso foi uma escolha
+consciente para o superintendente e os pares abrirem sem fricção, mas tem duas
+consequências que valem estar escritas:
+
+- Não há controle de acesso. `robots.txt` e `noindex` mantêm a página fora dos
+  buscadores, o que é higiene, **não** segurança.
+- A autoria (`updated_by`) é texto livre digitado na página. Ela orienta, mas
+  não prova nada.
+
+Fechar isso de verdade exige autenticação. O caminho recomendado é
+**público lê, autenticado edita**: Supabase Auth por magic link ou SSO do
+domínio do banco, RLS de escrita passando de `using(true)` para
+`using(auth.role() = 'authenticated')`, e a autoria vindo do token.
+
+#### A rede de segurança que já existe
+
+Enquanto a escrita é aberta, o plano é protegido por recuperação, não por
+prevenção:
+
+- Um **trigger no banco** guarda o estado do plano antes de qualquer exclusão,
+  e a cada 10 minutos de uso. Fica no banco de propósito: um atacante não usa
+  o nosso JavaScript.
+- A tabela `eventos2027_snapshots` é **somente-leitura para anon** — dá para
+  restaurar, mas não para apagar, forjar ou adulterar a trilha.
+- As funções do trigger têm `EXECUTE` revogado de `anon`. Sem isso o PostgREST
+  as exporia como `/rest/v1/rpc/<nome>`, e bastaria chamá-las em loop para
+  expulsar os pontos legítimos da janela de 60 — apagando o histórico sem
+  executar um único `DELETE`.
+
+Restaurar é feito na interface, em **Cenários → Histórico automático**.
 
 ## Publicar no GitHub Pages
 

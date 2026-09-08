@@ -6,6 +6,10 @@
 <title>Budget Eventos Internacionais 2027 — Open Platform &amp; BaaS</title>
 <meta name="description" content="Orçamento colaborativo de eventos internacionais de tecnologia 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
 <meta name="color-scheme" content="light">
+<!-- Orçamento interno: não deve aparecer em buscador. Não é controle de
+     acesso — quem tem o link continua vendo. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
 
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111'/><circle cx='16' cy='16' r='6' fill='%23990000'/></svg>">
@@ -191,6 +195,16 @@
       sem perder nenhuma das duas. Carregar um cenário substitui o plano compartilhado atual.
     </div>
     <div id="scenarioList"></div>
+
+    <div style="margin:26px 0 12px"><span class="eyebrow">Histórico automático</span></div>
+    <div class="modal-sub" style="margin-bottom:14px">
+      O banco guarda sozinho o estado do plano — sempre antes de qualquer
+      exclusão, e a cada 10 minutos de uso. Serve para desfazer um apagamento
+      acidental. Restaurar também gera um ponto de retorno, então nada aqui é
+      irreversível.
+    </div>
+    <div id="snapshotList"></div>
+
     <div class="modal-foot">
       <button class="modal-btn ghost" data-close>Fechar</button>
     </div>
@@ -519,9 +533,57 @@
     });
   }
 
+  async function renderHistorico() {
+    const host = document.getElementById('snapshotList');
+    const vazio = txt => `<div style="font-size:12.5px;font-weight:300;color:var(--ink-3);padding:12px 0">${txt}</div>`;
+    host.innerHTML = vazio('Carregando…');
+
+    let list = [];
+    try { list = await Store.listSnapshots(); }
+    catch (e) { host.innerHTML = vazio('Não foi possível carregar o histórico.'); return; }
+    if (!list.length) { host.innerHTML = vazio('Nenhum ponto de retorno ainda — ele aparece assim que o plano começar a mudar.'); return; }
+
+    const quando = iso => {
+      const d = new Date(iso);
+      const min = Math.round((Date.now() - d.getTime()) / 60000);
+      if (min < 1) return 'agora';
+      if (min < 60) return `há ${min} min`;
+      if (min < 1440) return `há ${Math.round(min / 60)}h`;
+      return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    host.innerHTML = list.map(s => `
+      <div class="scn-row">
+        <div class="scn-name">${quando(s.taken_at)}
+          <div class="scn-meta">${s.motivo === 'antes_de_apagar' ? 'antes de uma exclusão' : 'checkpoint'} · ${
+            (n => `${n} ${n === 1 ? 'evento' : 'eventos'}`)(s.eventos || 0)} · ${
+            (n => `${n} ${n === 1 ? 'pessoa' : 'pessoas'}`)(s.participacoes || 0)}</div>
+        </div>
+        <span class="badge ${s.motivo === 'antes_de_apagar' ? 'badge-amber' : 'badge-gray'}">${
+          s.motivo === 'antes_de_apagar' ? 'pré-exclusão' : 'auto'}</span>
+        <button class="scn-load" data-snap="${s.id}">Restaurar</button>
+      </div>`).join('');
+
+    host.querySelectorAll('[data-snap]').forEach(b => b.onclick = async () => {
+      const s = list.find(x => String(x.id) === b.dataset.snap);
+      if (!s) return;
+      if (!confirm(`Restaurar o plano de ${quando(s.taken_at)}?\n\nIsso substitui o plano atual para todos. O estado de agora vira um novo ponto de retorno, então dá para voltar.`)) return;
+      b.disabled = true; b.textContent = '…';
+      try {
+        await Store.restoreSnapshot(s);
+        close('modalScenarios');
+        toast('Plano restaurado.');
+      } catch (e) {
+        b.disabled = false; b.textContent = 'Restaurar';
+        toast('Não foi possível restaurar.', true);
+      }
+    });
+  }
+
   document.getElementById('btnScenarios').onclick = () => {
     open('modalScenarios');
     renderCenarios();
+    renderHistorico();
   };
 
   /* modos do mapa */
