@@ -6,6 +6,11 @@ Planejamento orçamentário de eventos internacionais de tecnologia para 2027 �
 Página única, colaborativa e publicada no GitHub Pages: qualquer pessoa com o
 link vê o mesmo orçamento consolidado, em tempo real, sem instalar nada.
 
+Interface no **Design System Velo.ai**. **Zero dependências externas** — nada
+de CDN, fontes remotas ou servidor de mapas: tudo é servido pelo próprio
+repositório, o que importa numa rede corporativa que bloqueia domínios de
+terceiros.
+
 ---
 
 ## O que a página faz
@@ -33,6 +38,19 @@ Passagens e hospedagem estão em BRL. Inscrições ficam na moeda de origem
 
 Não inclui visto, seguro-viagem nem excesso de bagagem.
 
+### Ingressos de cortesia
+
+Boa parte dos ingressos costuma vir dos fornecedores. Cada evento selecionado
+tem o controle **Ingresso cortesia**, que zera a inscrição das pessoas
+cobertas — passagem, hospedagem, diárias e traslado continuam valendo.
+
+É uma **quantidade**, não um sim/não: conseguir 2 passes para uma equipe de 4
+é o caso comum, e um booleano subestimaria o orçamento. O botão liga cobrindo
+todo mundo; o stepper ao lado ajusta para cobertura parcial.
+
+A economia aparece no card, no painel lateral, num KPI próprio do consolidado
+e nas duas exportações.
+
 ### Confiança das datas
 
 Datas e sedes de 2027 nem sempre são oficiais. Cada evento carrega um selo:
@@ -52,7 +70,7 @@ com prefixo `eventos2027_`:
 | Tabela | Papel |
 |---|---|
 | `eventos2027_events` | Catálogo. Editar custo de um evento = editar a linha aqui. |
-| `eventos2027_plan` | **Plano vigente compartilhado.** É o que todos veem ao abrir. |
+| `eventos2027_plan` | **Plano vigente compartilhado** (evento, participantes, cortesias). É o que todos veem ao abrir. |
 | `eventos2027_settings` | Limite de orçamento e câmbio (linha única). |
 | `eventos2027_scenarios` | Cenários salvos — fotografias nomeadas para comparação. |
 
@@ -69,11 +87,11 @@ A página foi construída para degradar sem quebrar:
 - **Supabase inacessível** → assume o espelho em `localStorage` e, se não
   houver, o catálogo embarcado em `assets/js/data.js`. O indicador fica
   vermelho e avisa. Tudo continua funcionando, só não compartilha.
-- **Servidor de mapas inacessível** → o Leaflet é servido pelo próprio
-  repositório, então a biblioteca nunca falta; o que pode ser bloqueado é o
-  servidor de tiles (CARTO). Se ele não responder, a aba Mapa não deixa
-  bolinhas soltas num fundo vazio: cai para a leitura de concentração
-  geográfica em HTML puro, com a seleção de eventos preservada.
+- **Mapa indisponível** → tanto a biblioteca quanto a geometria do mundo são
+  servidas pelo repositório, então na prática isso não acontece. Se ainda
+  assim faltarem, a aba Mapa não deixa bolinhas soltas num fundo vazio: cai
+  para a leitura de concentração geográfica em HTML puro, com a seleção de
+  eventos preservada.
 
 ### Segurança
 
@@ -86,12 +104,17 @@ consciente: não há dado sensível, apenas estimativas de custo de eventos
 públicos. Para restringir, altere as policies em [`supabase/schema.sql`](supabase/schema.sql)
 e reaplique.
 
-**Leaflet 1.9.4 e leaflet.heat 0.2.0 são servidos pelo próprio repositório**
-(`assets/vendor/leaflet/`, ~210 KB, licenças BSD incluídas). Não há CDN de
-terceiros, nem hash SRI para manter, nem script externo executando na página.
+Depois de carregada, a página faz chamadas de rede **apenas ao Supabase**.
+Não há CDN de terceiros, hash SRI para manter, script externo executando na
+página nem servidor de mapas. Tudo vem de `assets/vendor/`:
 
-Sobra uma única dependência de rede: os **tiles** do mapa, que vêm do CARTO.
-Ver [Dependência de tiles](#dependência-de-tiles).
+| | |
+|---|---|
+| Leaflet 1.9.4 + leaflet.heat 0.2.0 | ~210 KB · BSD |
+| Inter, Syne, JetBrains Mono (latin + latin-ext) | ~380 KB · OFL |
+| Geometria mundial Natural Earth 110m | ~170 KB · domínio público |
+
+Há um teste automatizado que falha se qualquer requisição externa reaparecer.
 
 ---
 
@@ -153,33 +176,36 @@ assets/js/data.js          catálogo embarcado (fallback offline)
 assets/js/store.js         persistência, sincronização e cenários
 assets/js/app.js           cálculo de custo, views e exportações
 assets/js/map.js           mapa de calor + modo autônomo
-assets/vendor/leaflet/     Leaflet 1.9.4 + leaflet.heat (BSD, servidos localmente)
+assets/vendor/leaflet/     Leaflet 1.9.4 + leaflet.heat (BSD)
+assets/vendor/fonts/       Inter, Syne, JetBrains Mono (OFL)
+assets/vendor/world/       geometria mundial Natural Earth 110m (domínio público)
+tools/gerar-mundo.js       regenera a geometria a partir do world-atlas
 supabase/schema.sql        tabelas, RLS e policies
 ```
 
 Sem build, sem `node_modules`, sem CDN. Abrir o `index.html` num servidor
 estático já funciona.
 
+O visual segue o **Design System Velo.ai**: superfícies cream e ink com
+textura de ruído, Syne 800 nos números, Inter no corpo, JetBrains Mono nos
+rótulos, eyebrow em cada seção e accordion no lugar de tabela plana.
+
 ---
 
-## Dependência de tiles
+## O mapa
 
-O desenho do mundo (as "tiles") vem de `basemaps.cartocdn.com`. É a única
-chamada externa que a página faz depois de carregar. Se o domínio estiver
-liberado, você vê o mapa completo; se não, a aba degrada sozinha para a
-leitura em HTML puro e ninguém fica travado.
+O desenho do mundo vem de um GeoJSON (Natural Earth 110m, domínio público)
+servido pelo próprio repositório — **sem servidor de tiles e sem chave de
+API**. A versão anterior usava tiles do CARTO, que passaram a exigir chave e
+cobriam o mapa de marcas d'água.
 
-Para eliminar também essa dependência, há dois caminhos:
-
-- **Liberar o domínio** `*.basemaps.cartocdn.com` na rede — o mais simples.
-- **Servir tiles próprios**: aponte a URL em `assets/js/map.js`
-  (`L.tileLayer(...)`) para um servidor interno de tiles. O resto do código
-  não muda.
-
-Atualizar o Leaflet, quando for o caso:
+Regenerar a geometria, se um dia for preciso mais detalhe:
 
 ```bash
-npm pack leaflet@<versão> leaflet.heat@<versão>
-# extraia dist/leaflet.js, dist/leaflet.css, dist/images/ e dist/leaflet-heat.js
-# para assets/vendor/leaflet/
+npm pack world-atlas@2 topojson-client@3
+SCRATCH=<pasta-com-os-pacotes> node tools/gerar-mundo.js
 ```
+
+O script corta os polígonos no antimeridiano. Sem isso, Fiji e a Rússia — que
+têm território dos dois lados da linha de data — são desenhados como faixas
+horizontais atravessando o mapa inteiro.

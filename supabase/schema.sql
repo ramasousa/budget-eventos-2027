@@ -45,14 +45,26 @@ comment on table eventos2027_events is
 
 -- ─── Plano vigente (estado compartilhado — todos veem o mesmo) ─────────────
 create table if not exists eventos2027_plan (
-  event_id    text primary key references eventos2027_events(id) on delete cascade,
-  people      int  not null default 1 check (people between 1 and 50),
-  note        text,
-  updated_by  text,
-  updated_at  timestamptz not null default now()
+  event_id      text primary key references eventos2027_events(id) on delete cascade,
+  people        int  not null default 1 check (people between 1 and 50),
+  -- Ingressos obtidos com fornecedores. Guardamos a QUANTIDADE e não um
+  -- booleano: conseguir 2 passes para uma equipe de 4 é o caso comum, e um
+  -- sim/não subestimaria o orçamento.
+  courtesy      int  not null default 0,
+  courtesy_note text,
+  note          text,
+  updated_by    text,
+  updated_at    timestamptz not null default now(),
+  constraint eventos2027_plan_courtesy_ck check (courtesy >= 0 and courtesy <= people)
 );
 comment on table eventos2027_plan is
   'Seleção viva e compartilhada. Uma linha por evento selecionado. É o que o superintendente e os pares enxergam ao abrir a página.';
+comment on column eventos2027_plan.courtesy is
+  'Quantos participantes já têm ingresso garantido via fornecedor. A inscrição só é cobrada de (people - courtesy).';
+
+-- Migração para bases criadas antes da coluna existir.
+alter table eventos2027_plan add column if not exists courtesy int not null default 0;
+alter table eventos2027_plan add column if not exists courtesy_note text;
 
 -- ─── Parâmetros do orçamento (linha única) ─────────────────────────────────
 create table if not exists eventos2027_settings (

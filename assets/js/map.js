@@ -10,21 +10,26 @@
    Eventos são agregados por cidade: Las Vegas com quatro eventos vira um
    único ponto quente, que é como o orçamento realmente enxerga a praça.
 
-   Degrada com elegância: sem Leaflet o painel avisa e o resto do app segue
-   funcionando normalmente.
+   O desenho do mundo vem de um GeoJSON servido pelo próprio repositório
+   (Natural Earth 110m, domínio público). Não há servidor de tiles: nenhuma
+   chave de API, nenhuma chamada externa, e nada quebra quando a rede do
+   banco bloqueia domínios de terceiros.
+
+   Degrada com elegância: se o Leaflet ou a geometria faltarem, o painel
+   entrega a mesma leitura em HTML puro e o resto do app segue funcionando.
    ────────────────────────────────────────────────────────────────────────── */
 
 const EventMap = (() => {
   let map = null;
   let heat = null;
   let markerLayer = null;
+  let worldLayer = null;
   let mode = 'plano';
   let booted = false;
   let failed = false;
-  let motivo = 'lib';          // 'lib' | 'tiles'
+  let motivo = 'lib';          // 'lib' | 'geo'
   let pendente = false;        // redesenho adiado por aba oculta
-  let tilesOk = false;
-  let tileErros = 0;
+  let mundo = null;            // GeoJSON dos países (carregado uma vez)
 
   const PESO_PRIORIDADE = { alta: 1.0, media: 0.62, baixa: 0.34 };
 
@@ -48,22 +53,46 @@ const EventMap = (() => {
       const c = map_.get(key);
       c.events.push(ev);
       c.peso += PESO_PRIORIDADE[ev.priority] || 0.5;
-      const sel = Store.state.plan[ev.id];
+      const sel = planOf(ev.id);
       if (sel) {
         c.selecionados += 1;
         c.people += sel.people;
-        c.investimento += costOf(ev, sel.people).total;
+        c.investimento += costOf(ev, sel.people, sel.courtesy).total;
       }
     });
     return [...map_.values()];
   }
 
   /* ─── construção ─────────────────────────────────────────────────────── */
+  /* Geometria dos países servida localmente — sem tiles, sem chave de API. */
+  async function carregarMundo() {
+    try {
+      if (!mundo) {
+        const res = await fetch('assets/vendor/world/countries-110m.geo.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        mundo = await res.json();
+      }
+      if (!map || !worldLayer) return;
+      worldLayer.clearLayers();
+      worldLayer.addLayer(L.geoJSON(mundo, {
+        interactive: false,
+        style: {
+          fillColor: '#16222e', fillOpacity: 1,
+          color: 'rgba(245,242,236,0.11)', weight: 0.6,
+        },
+      }));
+      refresh();
+    } catch (e) {
+      console.warn('[mapa] geometria indisponível:', e.message);
+      degradar('geo');
+    }
+  }
+
   function degradar(porque) {
     if (failed) return;
     failed = true;
     motivo = porque;
-    if (map) { map.remove(); map = null; booted = false; }
+    if (map) { map.remove(); map = null; booted = false; worldLayer = null; }
     document.getElementById('mapFallback').classList.add('show');
     document.querySelectorAll('.map-overlay').forEach(o => o.style.display = 'none');
     renderFallback();
@@ -80,31 +109,20 @@ const EventMap = (() => {
     booted = true;
 
     map = L.map('map', {
-      worldCopyJump: true,
-      minZoom: 1.4,
-      maxZoom: 8,
-      zoomControl: false,      // reposicionado abaixo: no topo colide com o
-      attributionControl: true, // painel "Leitura do mapa"
+      minZoom: 1.6,
+      maxZoom: 6,              // a geometria é 110m; ampliar mais só mostra serrilhado
+      zoomControl: false,      // reposicionado: no topo colide com "Leitura do mapa"
+      attributionControl: false,
       scrollWheelZoom: true,
-    }).setView([28, -15], 2.2);
+      maxBounds: [[-84, -190], [86, 190]],
+      maxBoundsViscosity: 0.85,
+    }).setView([26, -12], 2);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 18,
-    });
-    tiles.on('tileload', () => { tilesOk = true; });
-    tiles.on('tileerror', () => {
-      tileErros += 1;
-      // Marcadores sobre um fundo vazio não dizem nada a quem lê. Se o
-      // servidor de tiles não responder, o modo autônomo informa mais.
-      if (!tilesOk && tileErros >= 4) degradar('tiles');
-    });
-    tiles.addTo(map);
-
+    worldLayer = L.layerGroup().addTo(map);
     markerLayer = L.layerGroup().addTo(map);
+    carregarMundo();
     // O mapa nasce escondido dentro da aba; precisa remedir ao aparecer.
     // A falha de tiles pode derrubar o mapa antes deste timer disparar.
     setTimeout(() => { if (map) map.invalidateSize(); }, 60);
@@ -168,13 +186,15 @@ const EventMap = (() => {
 
       marker.bindPopup(() => {
         const items = c.events.map(ev => {
-          const on = !!Store.state.plan[ev.id];
-          const people = on ? Store.state.plan[ev.id].people : 1;
+          const pl = planOf(ev.id);
+          const on = !!pl;
+          const people = on ? pl.people : 1;
+          const cort = on ? pl.courtesy : 0;
           const cat = CATEGORIES[ev.category] || {};
           return `<div style="margin-bottom:0.5rem">
             <div style="font-size:0.7rem;font-weight:600;color:${cat.color || '#666'}">${esc(cat.label || '')}</div>
             <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.15rem">${esc(ev.name)}</div>
-            <div class="p-meta">${MONTHS[ev.monthNum]}/2027 · ${brl(costOf(ev, people).total)}${on ? ` · ${people}p` : '/pessoa'}</div>
+            <div class="p-meta">${MONTHS[ev.monthNum]}/2027 · ${brl(costOf(ev, people, cort).total)}${on ? ` · ${people}p` : '/pessoa'}</div>
             <button class="${on ? 'on' : ''}" data-map-toggle="${esc(ev.id)}">${on ? '✓ No orçamento — remover' : 'Adicionar ao orçamento'}</button>
           </div>`;
         }).join('<hr style="border:none;border-top:1px solid #eee;margin:0.6rem 0">');
@@ -218,6 +238,14 @@ const EventMap = (() => {
         ? `<b>${brl(t.total)}</b> distribuídos em <b>${praças}</b> praça${praças > 1 ? 's' : ''} e <b>${regioes}</b> ${regioes > 1 ? 'regiões' : 'região'}. Clique num ponto para incluir ou remover eventos do orçamento.`
         : 'Nenhum evento no orçamento ainda. No modo <b>Mercado</b> o calor mostra onde o ecossistema se concentra; clique num ponto para começar a montar o plano.';
     }
+  }
+
+  /*  O Leaflet escuta resize da janela mesmo com o contêiner oculto, e a
+      camada de calor quebra ao redesenhar num canvas 0x0. Ao sair da aba
+      soltamos a camada; ela volta no refresh quando a aba reaparece.  */
+  function suspend() {
+    if (heat && map) { map.removeLayer(heat); heat = null; }
+    pendente = true;
   }
 
   function setMode(m) {
@@ -287,8 +315,8 @@ const EventMap = (() => {
       <div class="fb-wrap">
         <div class="fb-head">
           <div class="fb-title">Concentração geográfica</div>
-          <div class="fb-sub">${motivo === 'tiles'
-            ? 'O servidor de mapas (CARTO) não respondeu — provavelmente bloqueado por esta rede. Sobre um fundo vazio os pontos não diriam nada, então abaixo vai a mesma leitura em modo autônomo.'
+          <div class="fb-sub">${motivo === 'geo'
+            ? 'A geometria do mapa não pôde ser carregada. Sobre um fundo vazio os pontos não diriam nada, então abaixo vai a mesma leitura em modo autônomo.'
             : 'A biblioteca de mapas não pôde ser carregada. Abaixo, a mesma leitura em modo autônomo.'}
             Clique numa praça para ver e selecionar os eventos dela.</div>
         </div>
@@ -315,8 +343,10 @@ const EventMap = (() => {
       const det = document.getElementById('fbDetail');
       det.innerHTML = `<div class="fb-detail-h">${esc(c.city)}, ${esc(c.country || '')}</div>` +
         c.events.map(ev => {
-          const on = !!Store.state.plan[ev.id];
-          const people = on ? Store.state.plan[ev.id].people : 1;
+          const pl = planOf(ev.id);
+          const on = !!pl;
+          const people = on ? pl.people : 1;
+          const cort = on ? pl.courtesy : 0;
           const cat = CATEGORIES[ev.category] || {};
           return `<div class="fb-ev">
             <span class="legend-swatch" style="background:${cat.color || '#888'}"></span>
@@ -335,6 +365,6 @@ const EventMap = (() => {
     if (map) map.closePopup();
   });
 
-  return { ensure, refresh, setMode, renderFallback, degradar,
+  return { ensure, refresh, setMode, suspend, renderFallback, degradar,
            get mode() { return mode; }, get degradado() { return failed; } };
 })();

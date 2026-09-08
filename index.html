@@ -15,6 +15,7 @@
 
 <!-- ─── TOPBAR ────────────────────────────────────────────────────────────── -->
 <header class="topbar">
+  <span class="noise"></span>
   <div class="topbar-left">
     <span class="brand-dot"></span>
     <span class="brand-name">Banco Bradesco</span>
@@ -26,6 +27,7 @@
 
 <!-- ─── BARRA DE SINCRONIZAÇÃO ────────────────────────────────────────────── -->
 <div class="syncbar">
+  <span class="noise"></span>
   <span class="sync-dot" id="syncDot"></span>
   <span class="sync-text" id="syncText">Carregando…</span>
   <span class="sync-spacer"></span>
@@ -49,7 +51,8 @@
     <!-- ─── VIEW: CATÁLOGO ─────────────────────────────────────────────── -->
     <section class="view active" id="view-catalogo">
       <div class="view-head">
-        <h1 class="view-title">Eventos Internacionais 2027</h1>
+        <span class="eyebrow">Catálogo 2027</span>
+        <h1 class="view-title">Eventos Internacionais</h1>
         <p class="view-sub">
           Selecione os eventos e defina o número de participantes. O orçamento é atualizado
           em tempo real e fica visível para todos que abrirem esta página.
@@ -58,7 +61,7 @@
 
       <div class="toolbar" id="catFilters"></div>
       <div class="toolbar">
-        <span style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:700">Prioridade</span>
+        <span class="toolbar-k">Prioridade</span>
         <span id="prioFilters" style="display:contents"></span>
         <span class="toolbar-sep"></span>
         <input type="search" class="search" id="searchInput" placeholder="Buscar evento, cidade, tema…" aria-label="Buscar">
@@ -73,12 +76,14 @@
     <section class="view flush" id="view-mapa">
       <div class="map-wrap">
         <div id="map"></div>
+        <span class="noise map-noise"></span>
 
         <div class="map-fallback" id="mapFallback"></div>
 
         <div class="map-overlay map-topleft">
           <div class="map-panel">
-            <div class="map-h">Leitura do mapa</div>
+            <span class="noise"></span>
+            <span class="eyebrow on-dark">Leitura do mapa</span>
             <div class="map-modes">
               <button class="map-mode active" data-mapmode="plano">Nosso plano</button>
               <button class="map-mode" data-mapmode="mercado">Mercado</button>
@@ -89,19 +94,22 @@
 
         <div class="map-overlay map-topright">
           <div class="map-panel">
-            <div class="map-h">Praças por intensidade</div>
+            <span class="noise"></span>
+            <span class="eyebrow on-dark" style="margin-bottom:12px">Praças por intensidade</span>
             <div id="mapRanking"></div>
           </div>
         </div>
 
         <div class="map-overlay map-bottomleft">
           <div class="map-panel">
+            <span class="noise"></span>
             <div class="legend-scale">
               <span class="legend-t">baixo</span>
               <span class="legend-grad"></span>
               <span class="legend-t">alto</span>
             </div>
             <div class="legend-cats" id="mapLegendCats"></div>
+            <div class="legend-t" style="margin-top:10px;opacity:.7">Geometria: Natural Earth · domínio público</div>
           </div>
         </div>
       </div>
@@ -110,6 +118,7 @@
     <!-- ─── VIEW: CALENDÁRIO ───────────────────────────────────────────── -->
     <section class="view" id="view-calendario">
       <div class="view-head">
+        <span class="eyebrow">Distribuição no ano</span>
         <h1 class="view-title">Calendário e carga de viagem</h1>
         <p class="view-sub">
           Distribuição dos eventos ao longo de 2027 e o custo que cada mês carrega.
@@ -123,6 +132,7 @@
     <!-- ─── VIEW: CONSOLIDADO ──────────────────────────────────────────── -->
     <section class="view" id="view-consolidado">
       <div class="view-head">
+        <span class="eyebrow">Visão executiva</span>
         <h1 class="view-title">Consolidado do orçamento</h1>
         <p class="view-sub">
           Visão para apresentação. Números abertos por frente temática, composição de custo,
@@ -136,20 +146,22 @@
 
   <!-- ─── RAIL: ORÇAMENTO ──────────────────────────────────────────────── -->
   <aside class="rail">
+    <span class="noise"></span>
+    <span class="glow rail-glow"></span>
     <div class="rail-head">
-      <div class="rail-title">Orçamento consolidado</div>
+      <span class="eyebrow on-dark">Orçamento consolidado</span>
       <div class="rail-total-k">Total selecionado</div>
       <div class="rail-total-v" id="railTotal">R$ 0</div>
       <div class="rail-stats">
         <div><div class="rail-k">Eventos</div><div class="rail-v" id="railEvents">0</div></div>
         <div><div class="rail-k">Participações</div><div class="rail-v" id="railPeople">0</div></div>
         <div><div class="rail-k">Passagens</div><div class="rail-v" id="railPassagens">R$ 0</div></div>
-        <div><div class="rail-k">Inscrições</div><div class="rail-v" id="railInscricoes">R$ 0</div></div>
+        <div><div class="rail-k">Economia cortesia</div><div class="rail-v green" id="railEconomia">R$ 0</div></div>
       </div>
     </div>
 
     <div class="rail-budget">
-      <div class="rail-k" style="margin-bottom:0.35rem">Limite de orçamento definido</div>
+      <div class="rail-k">Limite de orçamento definido</div>
       <div class="rail-budget-row">
         <span class="rail-prefix">R$</span>
         <input type="text" class="budget-input" id="budgetInput" inputmode="numeric" aria-label="Limite de orçamento">
@@ -170,6 +182,7 @@
 <!-- ─── MODAL: CENÁRIOS ───────────────────────────────────────────────────── -->
 <div class="overlay" id="modalScenarios">
   <div class="modal">
+    <span class="eyebrow">Comparação</span>
     <div class="modal-title">Cenários salvos</div>
     <div class="modal-sub">
       Um cenário é uma fotografia do orçamento: quais eventos, quantas pessoas, qual limite
@@ -186,6 +199,7 @@
 <!-- ─── MODAL: PREMISSAS ──────────────────────────────────────────────────── -->
 <div class="overlay" id="modalPremissas">
   <div class="modal">
+    <span class="eyebrow">Parâmetros compartilhados</span>
     <div class="modal-title">Premissas do orçamento</div>
     <div class="modal-sub">
       Estes parâmetros valem para todo mundo que abre a página. Alterar o câmbio recalcula
@@ -214,8 +228,9 @@
       <input type="text" class="modal-input" id="premAuthor" placeholder="Raul">
     </div>
 
-    <div class="note-box" style="font-size:0.7rem">
+    <div class="note-box" style="font-size:12px">
       Passagens e hospedagem já estão em reais e são estimativas de planejamento.
+      Ingressos de cortesia são marcados evento a evento, no card.
       Para ajustar o custo de um evento específico, edite a linha correspondente na tabela
       <b>eventos2027_events</b> do Supabase — a página lê direto de lá.
     </div>
@@ -244,6 +259,16 @@
 <script>
 /* ─── MONTAGEM ────────────────────────────────────────────────────────────── */
 (function boot() {
+
+  /* O cabeçalho fixo muda de altura conforme a syncbar quebra em telas
+     estreitas. Medimos de verdade em vez de chutar um valor no CSS. */
+  function medirChrome() {
+    const h = ['.topbar', '.syncbar', '.tabs']
+      .reduce((soma, sel) => soma + (document.querySelector(sel)?.offsetHeight || 0), 0);
+    document.documentElement.style.setProperty('--chrome', h + 'px');
+  }
+  medirChrome();
+  window.addEventListener('resize', medirChrome);
 
   /* abas */
   document.querySelectorAll('.tab').forEach(t =>

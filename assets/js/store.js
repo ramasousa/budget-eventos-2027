@@ -22,7 +22,7 @@ const Store = (() => {
 
   const state = {
     events: [],
-    plan: {},                                    // { [eventId]: { people } }
+    plan: {},                  // { [eventId]: { people, courtesy } }
     budgetLimit: 300000,
     fx: { USD: 6.20, EUR: 6.70, GBP: 7.90 },
     online: false,
@@ -145,7 +145,7 @@ const Store = (() => {
 
   async function pullPlanAndSettings() {
     const [planRows, cfgRows] = await Promise.all([
-      rest('GET', 'eventos2027_plan?select=event_id,people,updated_by,updated_at'),
+      rest('GET', 'eventos2027_plan?select=event_id,people,courtesy,updated_by,updated_at'),
       rest('GET', 'eventos2027_settings?select=*&id=eq.1'),
     ]);
 
@@ -155,7 +155,7 @@ const Store = (() => {
     const plan = {};
     let editor = null, editorAt = 0;
     (planRows || []).forEach(r => {
-      plan[r.event_id] = { people: r.people };
+      plan[r.event_id] = { people: r.people, courtesy: r.courtesy || 0 };
       const t = new Date(r.updated_at).getTime();
       if (t > editorAt) { editorAt = t; editor = r.updated_by; }
     });
@@ -223,32 +223,48 @@ const Store = (() => {
     }
   }
 
+  function upsertPlan(id) {
+    const row = state.plan[id];
+    queue('plan:' + id, () =>
+      rest('POST', 'eventos2027_plan?on_conflict=event_id',
+        [{ event_id: id, people: row.people, courtesy: row.courtesy,
+           updated_by: author(), updated_at: new Date().toISOString() }],
+        'resolution=merge-duplicates'));
+    lastLocalWrite = Date.now();
+    mirrorSave(); emit();
+  }
+
   function toggle(id) {
     if (state.plan[id]) {
       delete state.plan[id];
       queue('plan:' + id, () =>
         rest('DELETE', `eventos2027_plan?event_id=eq.${encodeURIComponent(id)}`));
+      lastLocalWrite = Date.now();
+      mirrorSave(); emit();
     } else {
-      state.plan[id] = { people: 1 };
-      queue('plan:' + id, () =>
-        rest('POST', 'eventos2027_plan?on_conflict=event_id',
-          [{ event_id: id, people: 1, updated_by: author(), updated_at: new Date().toISOString() }],
-          'resolution=merge-duplicates'));
+      state.plan[id] = { people: 1, courtesy: 0 };
+      upsertPlan(id);
     }
-    lastLocalWrite = Date.now();
-    mirrorSave(); emit();
   }
 
   function setPeople(id, n) {
     const people = Math.max(1, Math.min(50, n | 0));
-    if (!state.plan[id]) state.plan[id] = { people };
-    else state.plan[id].people = people;
-    queue('plan:' + id, () =>
-      rest('POST', 'eventos2027_plan?on_conflict=event_id',
-        [{ event_id: id, people, updated_by: author(), updated_at: new Date().toISOString() }],
-        'resolution=merge-duplicates'));
-    lastLocalWrite = Date.now();
-    mirrorSave(); emit();
+    if (!state.plan[id]) state.plan[id] = { people, courtesy: 0 };
+    else {
+      state.plan[id].people = people;
+      // O banco exige courtesy <= people; menos gente não pode deixar
+      // cortesias órfãs para trás.
+      if (state.plan[id].courtesy > people) state.plan[id].courtesy = people;
+    }
+    upsertPlan(id);
+  }
+
+  /* Ingressos já garantidos com fornecedores: não entram na inscrição. */
+  function setCourtesy(id, n) {
+    const row = state.plan[id];
+    if (!row) return;
+    row.courtesy = Math.max(0, Math.min(row.people, n | 0));
+    upsertPlan(id);
   }
 
   function clearPlan() {
@@ -306,7 +322,8 @@ const Store = (() => {
     // Reescreve o plano compartilhado inteiro: apaga e regrava.
     await rest('DELETE', 'eventos2027_plan?event_id=neq.__nada__');
     const rows = Object.entries(state.plan).map(([event_id, v]) => ({
-      event_id, people: v.people, updated_by: author(), updated_at: new Date().toISOString(),
+      event_id, people: v.people, courtesy: v.courtesy || 0,
+      updated_by: author(), updated_at: new Date().toISOString(),
     }));
     if (rows.length) {
       await rest('POST', 'eventos2027_plan?on_conflict=event_id', rows, 'resolution=merge-duplicates');
@@ -322,7 +339,7 @@ const Store = (() => {
   return {
     state,
     init, poll, flush,
-    toggle, setPeople, clearPlan, setBudget, setFx,
+    toggle, setPeople, setCourtesy, clearPlan, setBudget, setFx,
     saveScenario, listScenarios, applyScenario, deleteScenario,
     author, setAuthor, configured,
     onChange: fn => listeners.push(fn),
