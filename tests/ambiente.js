@@ -115,6 +115,36 @@ async function premissasPadrao(sessao) {
   if (!r.ok) throw new Error('setup: premissas não aplicadas (HTTP ' + r.status + ')');
 }
 
+
+/* Zera a política de viagens nacionais. Suítes que medem o total
+   internacional precisam disso: senão os R$ 32 mil do padrão entram na conta
+   e o número esperado muda sem ninguém entender por quê. */
+async function semViagensNacionais(sessao) {
+  const r = await fetch(`${API}/rest/v1/eventos2027_settings?on_conflict=id`, {
+    method: 'POST',
+    headers: { ...cabecalhos(sessao), Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify([{ id: 1, nacional: { polos: [], cargos: [] } }]),
+  });
+  if (!r.ok) throw new Error('setup: não zerei as viagens nacionais (HTTP ' + r.status + ')');
+}
+
+/* Devolve a política padrão (Recife e Curitiba). */
+async function comViagensNacionais(sessao, politica) {
+  const { Custo } = require(path.join(RAIZ, 'assets/js/custo.js'));
+  const r = await fetch(`${API}/rest/v1/eventos2027_settings?on_conflict=id`, {
+    method: 'POST',
+    headers: { ...cabecalhos(sessao), Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify([{ id: 1, nacional: politica || Custo.NACIONAL_PADRAO }]),
+  });
+  if (!r.ok) throw new Error('setup: não apliquei as viagens nacionais (HTTP ' + r.status + ')');
+}
+
+/* "R$ 135.210" → 135210. Comparar strings formatadas esconde diferença de
+   arredondamento; comparar número não. */
+function brlParaNumero(txt) {
+  return Number(String(txt).replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 /* Placar de uma suíte. */
 function placar(nome) {
   const itens = [];
@@ -135,4 +165,5 @@ module.exports = {
   RAIZ, SAIDA, WEB, API, CONFIG_MOCK, CONTA, CONTA2,
   carregarPlaywright, opcoesDoNavegador, sessaoDe, autenticar, cabecalhos,
   limparPlano, limparEventosPersonalizados, premissasPadrao, placar,
+  semViagensNacionais, comViagensNacionais, brlParaNumero,
 };

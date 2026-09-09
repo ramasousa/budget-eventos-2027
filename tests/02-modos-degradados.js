@@ -15,6 +15,7 @@ async function autenticar(pg, s) {
 
 (async () => {
   const SESSAO = await A.sessaoDe();
+  await A.semViagensNacionais(SESSAO);
   const H0 = { apikey: 'x', Authorization: 'Bearer ' + SESSAO.access_token };
   const ev0 = await (await fetch(`${A.API}/rest/v1/eventos2027_events?select=*`, { headers: H0 })).json();
   for (const e of ev0.filter(e => e.custom)) {

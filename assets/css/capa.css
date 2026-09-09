@@ -113,7 +113,7 @@ body.capa { display: block; background: var(--ink-deep); }
 .faixa { background: var(--ink); border-top: 1px solid rgba(245,242,236,.07); padding: 0 40px; }
 .capa-numeros {
   max-width: 1100px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+  display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
 }
 .capa-num { padding: 40px 26px; border-right: 1px solid rgba(245,242,236,.07);
   container-type: inline-size; }
@@ -172,13 +172,21 @@ body.capa { display: block; background: var(--ink-deep); }
 }
 
 /* ─── RESPONSIVO ─────────────────────────────────────────────────────────── */
+/* Com cinco números, 220px por coluna espremem "Economia com cortesias".
+   Antes de chegar lá, quebra em três. */
+@media (max-width: 1180px) {
+  .capa-numeros { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .capa-num { border-bottom: 1px solid rgba(245,242,236,.07); }
+  .capa-num:nth-child(3n) { border-right: none; }
+}
 @media (max-width: 900px) {
   .capa-numeros { grid-template-columns: repeat(2, 1fr); }
   .capa-num { border-bottom: 1px solid rgba(245,242,236,.07); }
+  .capa-num:nth-child(3n) { border-right: 1px solid rgba(245,242,236,.07); }
   .capa-num:nth-child(2n) { border-right: none; }
 }
 @media (max-width: 380px) {
-  /* "Internacionais" é uma palavra só e precisa caber inteira. */
+  /* O título é duas palavras longas e não pode quebrar feio. */
   .hero-titulo { font-size: 22px; }
   .hero { padding: 0 18px 48px; }
   .secao { padding: 48px 18px; }

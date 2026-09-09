@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Budget Eventos Internacionais 2027 — Open Platform &amp; BaaS</title>
+<title>Orçamento de Viagens 2027 — Open Platform &amp; BaaS</title>
 <meta name="description" content="Orçamento colaborativo de eventos internacionais de tecnologia 2027 — Open Platform &amp; BaaS, BU AI First, Banco Bradesco.">
 <meta name="color-scheme" content="light">
 <!-- Orçamento interno: não deve aparecer em buscador. Não é controle de
@@ -51,6 +51,7 @@
 <!-- ─── ABAS ──────────────────────────────────────────────────────────────── -->
 <nav class="tabs">
   <button class="tab active" data-tab="catalogo">Catálogo<span class="tab-badge" id="tabCountCatalogo">0</span></button>
+  <button class="tab" data-tab="nacional">Viagens nacionais<span class="tab-badge" id="tabCountNacional">0</span></button>
   <button class="tab" data-tab="mapa">Mapa de calor</button>
   <button class="tab" data-tab="calendario">Calendário 2027</button>
   <button class="tab" data-tab="consolidado">Consolidado<span class="tab-badge" id="tabCountSel" style="display:none">0</span></button>
@@ -88,6 +89,32 @@
       </div>
 
       <div class="events-grid" id="eventsGrid"></div>
+    </section>
+
+    <!-- ─── VIEW: VIAGENS NACIONAIS ────────────────────────────────────── -->
+    <section class="view" id="view-nacional">
+      <div class="view-head">
+        <span class="eyebrow">Política 2027</span>
+        <h1 class="view-title">Viagens Nacionais</h1>
+        <p class="view-sub">
+          Visita aos polos é rotina, não decisão caso a caso. Aqui se define a regra —
+          quantas vezes por ano cada cargo vai a cada escritório — e o orçamento sai dela.
+          Mudou o time ou a cadência, muda um número e o total acompanha.
+        </p>
+      </div>
+
+      <div class="polos-grid" id="polosGrid"></div>
+
+      <div class="matriz-head">
+        <span class="eyebrow">Cadência anual</span>
+        <div class="matriz-acoes">
+          <button class="ghost-btn" id="btnNovoCargo">+ Cargo</button>
+          <button class="ghost-btn" id="btnNovoPolo">+ Polo</button>
+        </div>
+      </div>
+      <div class="matriz" id="matrizNacional"></div>
+
+      <div class="nac-resumo" id="nacResumo"></div>
     </section>
 
     <!-- ─── VIEW: MAPA ─────────────────────────────────────────────────── -->
@@ -168,8 +195,12 @@
     <span class="glow rail-glow"></span>
     <div class="rail-head">
       <span class="eyebrow on-dark">Orçamento consolidado</span>
-      <div class="rail-total-k">Total selecionado</div>
+      <div class="rail-total-k">Total do ano</div>
       <div class="rail-total-v" id="railTotal">R$ 0</div>
+      <div class="rail-split">
+        <div><div class="rail-k">Internacional</div><div class="rail-v" id="railIntl">R$ 0</div></div>
+        <div><div class="rail-k">Nacional</div><div class="rail-v" id="railNac">R$ 0</div></div>
+      </div>
       <div class="rail-stats">
         <div><div class="rail-k">Eventos</div><div class="rail-v" id="railEvents">0</div></div>
         <div><div class="rail-k">Participações</div><div class="rail-v" id="railPeople">0</div></div>
@@ -499,11 +530,12 @@
   /* cenários */
   document.getElementById('btnSaveScenario').onclick = async () => {
     const t = totals();
-    if (!t.events) return toast('Selecione ao menos um evento antes de salvar.', true);
+    if (!t.events && totalGeral() <= 0) return toast('Nada a salvar ainda.', true);
     const nome = prompt('Nome do cenário (ex: "Plano enxuto — só prioridade alta")');
     if (!nome || !nome.trim()) return;
     try {
-      await Store.saveScenario(nome.trim(), t.total);
+      // O cenário guarda o orçamento inteiro: comparar metades seria mentir.
+      await Store.saveScenario(nome.trim(), totalGeral());
       toast('Cenário "' + nome.trim() + '" salvo e compartilhado.');
     } catch (e) {
       toast('Não foi possível salvar no banco. Verifique a conexão.', true);

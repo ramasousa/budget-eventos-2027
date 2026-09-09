@@ -1,6 +1,7 @@
-# Budget Eventos Internacionais 2027
+# Orçamento de Viagens 2027
 
-Planejamento orçamentário de eventos internacionais de tecnologia para 2027 —
+Planejamento orçamentário de viagem para 2027 — eventos internacionais de
+tecnologia e a visita de rotina aos polos nacionais —
 **Open Platform & BaaS, BU AI First · Banco Bradesco**.
 
 Página única, colaborativa e publicada no GitHub Pages: qualquer pessoa com o
@@ -32,12 +33,13 @@ ninguém perceberia até a reunião — há um teste que compara os dois.
 | Aba | Para quê |
 |---|---|
 | **Catálogo** | 24 eventos com custo aberto por pessoa, benefício estratégico, perfil de quem deve ir e resultado esperado. Selecione, defina participantes e **inclua eventos que faltam**. |
+| **Viagens nacionais** | A política de visita aos polos (Recife, Curitiba): quantas pessoas em cada cargo, quantas vezes por ano em cada escritório, a que custo. |
 | **Mapa de calor** | Onde o ecossistema se concentra (*Mercado*) versus onde estamos indo e quanto custa cada praça (*Nosso plano*). |
 | **Calendário 2027** | Distribuição no ano, custo por mês e alerta de concentração de ausências. |
-| **Consolidado** | Visão de apresentação: KPIs, composição de custo, distribuição geográfica e por trimestre, tabela detalhada e premissas. |
+| **Consolidado** | Visão de apresentação: KPIs, composição de custo, internacional × nacional, distribuição geográfica e por trimestre, detalhamento e premissas. |
 
-O painel de orçamento à direita acompanha todas as abas: total, limite,
-percentual comprometido e saldo.
+O painel de orçamento à direita acompanha todas as abas: total do ano aberto
+em **internacional e nacional**, limite, percentual comprometido e saldo.
 
 ### Modelo de custo
 
@@ -64,6 +66,46 @@ todo mundo; o stepper ao lado ajusta para cobertura parcial.
 
 A economia aparece no card, no painel lateral, num KPI próprio do consolidado
 e nas duas exportações.
+
+### Viagens nacionais: uma política, não uma lista
+
+Recife e Curitiba são escritórios visitados por rotina. Isso não é decisão
+caso a caso como um evento internacional — é uma **regra**, e a aba
+*Viagens nacionais* edita a regra:
+
+```
+total = Σ_polo Σ_cargo (pessoas × viagens/ano no polo) × custo do polo
+```
+
+A tela tem duas partes. Os **polos** (nome, custo fechado por viagem) e uma
+**matriz cargo × polo** com quantas pessoas há em cada cargo e quantas vezes
+por ano cada uma vai a cada escritório. Mudou o time ou a cadência, muda um
+número e o orçamento acompanha.
+
+O padrão que veio da planilha: Gerente Sênior 4× por ano a cada polo, Gerente
+2×, a R$ 2.000 a viagem. Com 1 sênior e 2 gerentes, dá **R$ 32.000/ano**.
+
+Poderia ter sido uma lista de "pessoa × destino", copiando a planilha. Seria
+pior: cada admissão ou promoção viraria retrabalho manual de trinta linhas, e
+o número deixaria de ter regra visível para o superintendente questionar. Aqui
+a pergunta "por que R$ 32 mil?" tem resposta na tela.
+
+Polo novo entra pela busca de cidades — a coordenada vem junto e ele aparece
+no mapa na hora, com linguagem visual própria (verde tracejado). Fica **fora**
+da camada de calor de propósito: o calor mede concentração de eventos
+internacionais, e misturar a visita de rotina distorceria a leitura.
+
+Cadência de polo novo nasce **zerada**. Ninguém viaja por acidente de cadastro.
+
+#### O que isso mudou no número da capa
+
+Antes, a manchete era o orçamento de eventos internacionais. Agora é o
+**orçamento de viagem inteiro**, e o limite definido é comparado contra ele.
+O painel lateral, o consolidado e as duas exportações abrem a composição —
+internacional e nacional separados, somando no total.
+
+Vale conferir se os R$ 300.000 do limite foram definidos pensando só nos
+eventos ou na viagem toda. Se for só nos eventos, o limite precisa subir.
 
 ### Adicionar um evento que não está na lista
 
@@ -242,7 +284,16 @@ prevenção:
   expulsar os pontos legítimos da janela de 60 — apagando o histórico sem
   executar um único `DELETE`.
 
-Restaurar é feito na interface, em **Cenários → Histórico automático**.
+Restaurar é feito na interface, em **Cenários → Histórico automático**. Cada
+snapshot guarda também a **política de viagens nacionais**, então restaurar um
+ponto no tempo devolve o orçamento inteiro, não só a metade internacional.
+
+**Limite conhecido:** o gatilho é o `DELETE` no plano. Editar só a política
+nacional — mudar uma cadência, remover um polo — não tira snapshot por si só.
+Como a escrita agora exige conta e cada remoção pede confirmação, e como a
+política toda são meia dúzia de números, o risco é pequeno e a reconstrução é
+de um minuto. Se um dia a política crescer, vale um gatilho próprio em
+`settings`.
 
 ## Publicar no GitHub Pages
 
@@ -282,6 +333,16 @@ Campos obrigatórios: `id`, `name`, `category` (`api`, `fin`, `tech`, `open`,
 mapa. Para que ele também exista no modo offline, replique-o em
 `assets/js/data.js`.
 
+### Mudar a política de viagens nacionais
+
+Aba **Viagens nacionais**. O custo por viagem fica no cartão do polo; pessoas
+e cadência, na matriz. Tudo grava na mesma linha de `settings`, então
+alterações em sequência viram um `POST` só.
+
+Para incluir um escritório novo: **+ Polo**, escolha a cidade na busca (a
+coordenada vem junto) e defina o custo. A cadência de cada cargo começa em
+zero — preencha na matriz.
+
 ### Mudar o câmbio ou o limite
 
 Pela própria página, botão **Premissas**. Vale para todos.
@@ -314,6 +375,7 @@ atrapalham em paralelo — e derruba tudo no fim.
 | `05-rede-de-seguranca` | executa o ataque de apagamento e verifica a recuperação |
 | `06-capa` | números ao vivo, mundo em pontos, navegação entre as páginas |
 | `07-login` | somente-leitura, portão de escrita, login, logout, sessão expirada |
+| `08-viagens-nacionais` | política de visita aos polos: cadência, custo, polo novo, remoção, exportações |
 
 O site em produção **não usa nada** do `package.json`: continua sendo HTML, CSS
 e JavaScript servidos direto. Playwright é dependência de teste.
@@ -338,6 +400,9 @@ Cada uma corresponde a um bug que **já aconteceu**:
 - uma regra `container > *` jogava os decorativos no fluxo e empurrava o hero
   1.540px para baixo
 - a capa e a ferramenta mostrando totais diferentes
+- na matriz de viagens nacionais, a cadência aparecia **zerada em toda célula**
+  enquanto o rodapé somava certo: o objeto de cálculo sobrescrevia o mapa
+  `viagens` (por polo) com o número total de deslocamentos
 - `config.js` falhando ao carregar deixava as duas páginas **em branco**:
   `const SUPABASE` fica na zona morta e até `typeof SUPABASE` lança
 - qualquer requisição externa reaparecendo

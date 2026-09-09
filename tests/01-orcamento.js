@@ -29,6 +29,10 @@ async function autenticar(pg, s) {
     body: JSON.stringify([{ id: 1, budget_limit: 300000, fx: { USD: 6.20, EUR: 6.70, GBP: 7.90 } }]),
   });
 
+  // Estas suítes medem o modelo INTERNACIONAL. Com a política nacional
+  // ligada, os R$ 32 mil dela entrariam em todo total esperado.
+  await A.semViagensNacionais(SESSAO);
+
   const H0 = { apikey: 'x', Authorization: 'Bearer ' + SESSAO.access_token };
   const ev0 = await (await fetch(`${A.API}/rest/v1/eventos2027_events?select=*`, { headers: H0 })).json();
   for (const e of ev0.filter(e => e.custom)) {

@@ -23,6 +23,9 @@ const Store = (() => {
   const state = {
     events: [],
     plan: {},                  // { [eventId]: { people, courtesy } }
+    // Política de visita aos polos nacionais: { polos:[], cargos:[] }.
+    // Não é uma seleção, é uma regra — ver o cabeçalho de custo.js.
+    nacional: { polos: [], cargos: [] },
     budgetLimit: 300000,
     fx: { USD: 6.20, EUR: 6.70, GBP: 7.90 },
     online: false,
@@ -90,11 +93,18 @@ const Store = (() => {
     try { localStorage.setItem(LS_AUTHOR, name); } catch (e) { /* ignora */ }
   }
 
+  /* A normalização mora em custo.js, com a fórmula. Aqui só delegamos —
+     duas cópias da mesma regra é como as telas passam a discordar. */
+  function normalizarNac(cfg) {
+    return typeof Custo !== 'undefined' ? Custo.normalizarNacional(cfg)
+                                        : (cfg || { polos: [], cargos: [] });
+  }
+
   function mirrorSave() {
     try {
       localStorage.setItem(LS_MIRROR, JSON.stringify({
         plan: state.plan, budgetLimit: state.budgetLimit, fx: state.fx,
-        events: state.events, at: Date.now(),
+        nacional: state.nacional, events: state.events, at: Date.now(),
       }));
     } catch (e) { /* cota estourada ou modo privado — segue sem espelho */ }
   }
@@ -216,15 +226,21 @@ const Store = (() => {
     const cfg = (cfgRows || [])[0];
     const nextLimit = cfg ? Number(cfg.budget_limit) : state.budgetLimit;
     const nextFx = cfg && cfg.fx ? cfg.fx : state.fx;
+    // A coluna pode não existir numa base anterior à migração 02: aí o campo
+    // vem undefined e mantemos o que já está em memória.
+    const nextNac = cfg && cfg.nacional !== undefined
+      ? normalizarNac(cfg.nacional) : state.nacional;
 
     const changed =
       JSON.stringify(plan) !== JSON.stringify(state.plan) ||
       nextLimit !== state.budgetLimit ||
-      JSON.stringify(nextFx) !== JSON.stringify(state.fx);
+      JSON.stringify(nextFx) !== JSON.stringify(state.fx) ||
+      JSON.stringify(nextNac) !== JSON.stringify(state.nacional);
 
     state.plan = plan;
     state.budgetLimit = nextLimit;
     state.fx = nextFx;
+    state.nacional = nextNac;
     state.lastEditor = editor;
     return changed;
   }
@@ -236,10 +252,16 @@ const Store = (() => {
     state.events = (mirror && mirror.events && mirror.events.length)
       ? mirror.events
       : (typeof EVENTS_SEED !== 'undefined' ? EVENTS_SEED.slice() : []);
+    // Sem espelho e sem banco a política nacional fica VAZIA, ao contrário do
+    // catálogo. O catálogo embarcado é uma lista de candidatos e não custa
+    // nada até alguém escolher; a política nacional é dinheiro no total. Semear
+    // R$ 32 mil de memória, sem saber o que o banco diz, seria mostrar um
+    // número que talvez não exista. A semente vive na migração, não aqui.
     if (mirror) {
       state.plan = mirror.plan || {};
       state.budgetLimit = mirror.budgetLimit ?? 300000;
       state.fx = mirror.fx || state.fx;
+      if (mirror.nacional) state.nacional = normalizarNac(mirror.nacional);
     }
     state.ready = true;
     emit();
@@ -351,8 +373,91 @@ const Store = (() => {
     queue('settings', () =>
       rest('POST', 'eventos2027_settings?on_conflict=id',
         [{ id: 1, budget_limit: state.budgetLimit, fx: state.fx,
+           nacional: state.nacional,
            updated_by: author(), updated_at: new Date().toISOString() }],
         'resolution=merge-duplicates'));
+  }
+
+  /* ─── política de viagens nacionais ────────────────────────────────────
+     Tudo grava na mesma linha de settings, então uma única chave de debounce
+     ('settings') basta: alterações em sequência viram um POST só.
+     ─────────────────────────────────────────────────────────────────────── */
+  function aplicarNacional(mutacao) {
+    if (!podeEscrever()) return false;
+    const cfg = normalizarNac(state.nacional);
+    mutacao(cfg);
+    state.nacional = normalizarNac(cfg);
+    queueSettings();
+    lastLocalWrite = Date.now();
+    mirrorSave(); emit();
+    return true;
+  }
+
+  const idUnico = (nome, usados, padrao) => {
+    const base = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || padrao;
+    let id = base, n = 2;
+    while (usados.includes(id)) id = base + '-' + (n++);
+    return id;
+  };
+
+  function setPoloCusto(poloId, valor) {
+    return aplicarNacional(cfg => {
+      const p = cfg.polos.find(x => x.id === poloId);
+      if (p) p.custo = Math.max(0, Number(valor) || 0);
+    });
+  }
+
+  function setCargoPessoas(cargoId, n) {
+    return aplicarNacional(cfg => {
+      const c = cfg.cargos.find(x => x.id === cargoId);
+      if (c) c.pessoas = Math.max(0, Math.min(999, n | 0));
+    });
+  }
+
+  /* Viagens por ano de um cargo a um polo. É a política em si. */
+  function setViagens(cargoId, poloId, n) {
+    return aplicarNacional(cfg => {
+      const c = cfg.cargos.find(x => x.id === cargoId);
+      if (c) c.viagens[poloId] = Math.max(0, Math.min(52, n | 0));
+    });
+  }
+
+  function criarPolo(dados) {
+    return aplicarNacional(cfg => {
+      const id = idUnico(dados.nome, cfg.polos.map(p => p.id), 'polo');
+      cfg.polos.push({
+        id, nome: dados.nome, uf: dados.uf || '',
+        lat: typeof dados.lat === 'number' ? dados.lat : null,
+        lng: typeof dados.lng === 'number' ? dados.lng : null,
+        custo: Math.max(0, Number(dados.custo) || 0),
+      });
+      // Polo novo entra com cadência zero: ninguém viaja para um lugar por
+      // acidente de cadastro.
+      cfg.cargos.forEach(c => { c.viagens[id] = 0; });
+    });
+  }
+
+  function removerPolo(poloId) {
+    return aplicarNacional(cfg => {
+      cfg.polos = cfg.polos.filter(p => p.id !== poloId);
+      cfg.cargos.forEach(c => { delete c.viagens[poloId]; });
+    });
+  }
+
+  function criarCargo(nome, pessoas) {
+    return aplicarNacional(cfg => {
+      const id = idUnico(nome, cfg.cargos.map(c => c.id), 'cargo');
+      const viagens = {};
+      cfg.polos.forEach(p => { viagens[p.id] = 0; });
+      cfg.cargos.push({ id, nome, pessoas: Math.max(0, Math.min(999, pessoas | 0)), viagens });
+    });
+  }
+
+  function removerCargo(cargoId) {
+    return aplicarNacional(cfg => {
+      cfg.cargos = cfg.cargos.filter(c => c.id !== cargoId);
+    });
   }
 
   /* ─── eventos incluídos pela equipe ────────────────────────────────────── */
@@ -424,6 +529,7 @@ const Store = (() => {
     }
     if (snap.budget_limit != null) state.budgetLimit = Number(snap.budget_limit);
     if (snap.fx) state.fx = snap.fx;
+    if (snap.nacional) state.nacional = normalizarNac(snap.nacional);
     state.plan = {};
     Object.entries(plano).forEach(([id, v]) => {
       state.plan[id] = { people: v.people, courtesy: v.courtesy || 0 };
@@ -438,7 +544,10 @@ const Store = (() => {
     if (!podeEscrever()) throw new Error('sem-permissao');
     const payload = {
       name, author: author(), selections: state.plan,
-      budget_limit: state.budgetLimit, fx: state.fx, total,
+      budget_limit: state.budgetLimit, fx: state.fx,
+      // Sem a política junto, comparar dois cenários compararia metades
+      // diferentes do mesmo orçamento.
+      nacional: state.nacional, total,
     };
     if (!configured()) throw new Error('offline');
     await rest('POST', 'eventos2027_scenarios', [payload]);
@@ -454,6 +563,7 @@ const Store = (() => {
     state.plan = s.selections || {};
     state.budgetLimit = Number(s.budget_limit) || state.budgetLimit;
     if (s.fx) state.fx = s.fx;
+    if (s.nacional) state.nacional = normalizarNac(s.nacional);
     lastLocalWrite = Date.now();
     mirrorSave(); emit();
 
@@ -480,6 +590,8 @@ const Store = (() => {
     state,
     init, poll, flush,
     toggle, setPeople, setCourtesy, clearPlan, setBudget, setFx,
+    setPoloCusto, setCargoPessoas, setViagens,
+    criarPolo, removerPolo, criarCargo, removerCargo,
     criarEvento, removerEvento,
     listSnapshots, restoreSnapshot,
     saveScenario, listScenarios, applyScenario, deleteScenario,

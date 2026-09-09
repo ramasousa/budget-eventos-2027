@@ -15,6 +15,7 @@ const http = require('http');
 const path = require('path');
 const RAIZ = path.resolve(__dirname, '..');
 const { EVENTS_SEED } = require(path.join(RAIZ, 'assets/js/data.js'));
+const { Custo } = require(path.join(RAIZ, 'assets/js/custo.js'));
 
 const db = {
   events: EVENTS_SEED.map(e => ({
@@ -26,7 +27,8 @@ const db = {
     url: e.url, benefit: e.benefit, audience: e.audience, outcome: e.outcome, active: true,
   })),
   plan: [],
-  settings: [{ id: 1, budget_limit: 300000, fx: { USD: 6.20, EUR: 6.70, GBP: 7.90 }, updated_by: 'setup' }],
+  settings: [{ id: 1, budget_limit: 300000, fx: { USD: 6.20, EUR: 6.70, GBP: 7.90 },
+               nacional: JSON.parse(JSON.stringify(Custo.NACIONAL_PADRAO)), updated_by: 'setup' }],
   scenarios: [],
   snapshots: [],
 };
@@ -40,6 +42,7 @@ function tirarSnapshot(motivo) {
   db.snapshots.unshift({
     id: proxSnap++, taken_at: new Date().toISOString(), motivo, plano,
     budget_limit: db.settings[0].budget_limit, fx: db.settings[0].fx,
+    nacional: db.settings[0].nacional,
     eventos: db.plan.length,
     participacoes: db.plan.reduce((a, p) => a + p.people, 0),
   });

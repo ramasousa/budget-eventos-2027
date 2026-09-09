@@ -845,3 +845,134 @@ body.somente-leitura .rail-btn { /* exportar continua valendo para quem só lê 
   .faixa-leitura { padding: 11px 24px; }
   .faixa-leitura .ghost-btn { margin-left: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VIAGENS NACIONAIS
+   Política, não seleção: cartões para os polos e uma matriz cargo × polo.
+   A matriz é grade de entrada, não tabela de dados — o DS não admite tabela
+   plana, e aqui cada célula é um campo editável.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.polos-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 14px; margin-bottom: 32px;
+}
+.polo-card {
+  position: relative; background: var(--white); border: 1px solid var(--cream-3);
+  border-radius: 4px; padding: 18px;
+  transition: border-color .3s var(--ease), box-shadow .3s var(--ease);
+}
+.polo-card:hover { border-color: var(--ink-4); box-shadow: 0 8px 24px rgba(11,18,25,.06); }
+.polo-card.novo { border-style: dashed; }
+.polo-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.polo-nome { font-family: var(--display); font-weight: 800; font-size: 19px;
+  letter-spacing: -.01em; color: var(--ink); }
+.polo-uf { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.polo-x {
+  width: 22px; height: 22px; border: 1px solid var(--cream-3); border-radius: 4px;
+  background: var(--white); color: var(--ink-4); font-size: 11px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all .3s var(--ease);
+}
+.polo-x:hover { border-color: var(--red-line); color: var(--red); background: var(--red-soft); }
+.polo-custo { margin-top: 16px; }
+.polo-k { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 6px; }
+.polo-input-wrap { display: flex; align-items: baseline; gap: 6px;
+  border-bottom: 1px solid var(--cream-3); padding-bottom: 4px; }
+.polo-input-wrap .rail-prefix { font-family: var(--mono); font-size: 11px; color: var(--ink-4); }
+.polo-input {
+  flex: 1; min-width: 0; border: none; background: transparent; padding: 0;
+  font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--ink);
+  outline: none;
+}
+.polo-input.full {
+  width: 100%; font-family: var(--body); font-weight: 400; font-size: 13px;
+  border: 1px solid var(--cream-3); border-radius: 4px; padding: 8px 10px;
+  margin-bottom: 12px; transition: border-color .3s var(--ease);
+}
+.polo-input.full:focus { border-color: var(--ink-2); }
+.polo-ac { position: relative; }
+.polo-acoes { display: flex; gap: 8px; margin-top: 4px; }
+.polo-nota { font-size: 11.5px; font-weight: 300; color: var(--ink-3); margin-top: 8px; }
+.polo-foot {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--cream-2);
+  font-size: 12px; font-weight: 300; color: var(--ink-3);
+}
+.polo-foot b { font-size: 14px; font-weight: 500; color: var(--ink); }
+
+/* ─── matriz cargo × polo ─── */
+.matriz-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.matriz-acoes { display: flex; gap: 8px; }
+.matriz { --mz-polos: 2; border: 1px solid var(--cream-3); border-radius: 4px;
+  background: var(--white); overflow-x: auto; }
+.mz-head, .mz-row, .mz-foot {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) 78px repeat(var(--mz-polos), minmax(88px, 1fr)) 108px 30px;
+  align-items: center; gap: 10px; padding: 11px 16px; min-width: 620px;
+}
+.mz-head {
+  border-bottom: 1px solid var(--cream-3); background: var(--cream);
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.mz-row { border-bottom: 1px solid var(--cream-2); }
+.mz-row:last-of-type { border-bottom: none; }
+.mz-row.novo { border-style: dashed; }
+.mz-nome { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.mz-head .mz-nome, .mz-head .mz-n, .mz-head .mz-c, .mz-head .mz-total {
+  font-family: var(--mono); font-size: 9px; font-weight: 400; color: var(--ink-4); }
+.mz-n, .mz-c { text-align: center; }
+.mz-total { text-align: right; font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.mz-input {
+  width: 100%; text-align: center; border: 1px solid var(--cream-3); border-radius: 4px;
+  background: var(--white); padding: 7px 4px; font-family: var(--mono); font-size: 13px;
+  color: var(--ink); outline: none; transition: border-color .3s var(--ease);
+}
+.mz-input:focus { border-color: var(--ink-2); }
+.mz-input.full { text-align: left; font-family: var(--body); font-size: 13px; padding: 7px 10px; }
+.mz-x {
+  width: 22px; height: 22px; border: 1px solid transparent; border-radius: 4px;
+  background: transparent; color: var(--ink-4); font-size: 11px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s var(--ease);
+}
+.mz-x:hover { border-color: var(--red-line); color: var(--red); background: var(--red-soft); }
+.mz-x-sp { width: 22px; }
+.mz-foot {
+  border-top: 1px solid var(--cream-3); background: var(--cream);
+  font-size: 13px; font-weight: 500; color: var(--ink);
+}
+.mz-foot .mz-n, .mz-foot .mz-c { font-family: var(--mono); font-size: 13px; }
+
+.nac-resumo { margin-top: 28px; }
+.nac-linha {
+  border-left: 2px solid var(--red-line); padding: 4px 0 4px 18px;
+}
+.nac-linha p { font-size: 13.5px; font-weight: 300; line-height: 1.72;
+  color: var(--ink-2); max-width: 72ch; margin-top: 8px; }
+
+/* ─── rail: composição do total ─── */
+.rail-split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px;
+  padding-top: 14px; border-top: 1px solid rgba(245,242,236,.09);
+}
+.sel-item.nac { border-bottom: 1px solid rgba(245,242,236,.12); }
+.sel-ir {
+  margin-left: auto; font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-4); background: transparent;
+  border: 1px solid rgba(245,242,236,.16); border-radius: 20px; padding: 3px 9px;
+  transition: all .3s var(--ease);
+}
+.sel-ir:hover { color: var(--cream); border-color: rgba(245,242,236,.4); }
+
+body.somente-leitura .polo-x,
+body.somente-leitura .mz-x { opacity: .38; pointer-events: none; }
+
+@media (max-width: 1120px) {
+  .mz-head, .mz-row, .mz-foot { min-width: 560px; }
+}

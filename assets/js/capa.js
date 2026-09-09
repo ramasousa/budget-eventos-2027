@@ -54,6 +54,7 @@ const Capa = (() => {
   async function carregar() {
     let eventos = typeof EVENTS_SEED !== 'undefined' ? EVENTS_SEED.slice() : [];
     let plan = {}, fx = Custo.FX_PADRAO, limite = 300000, autor = null, quando = null;
+    let nacional = { polos: [], cargos: [] };
     let online = false;
 
     if (configurado()) {
@@ -71,40 +72,58 @@ const Capa = (() => {
           if (t > maisRecente) { maisRecente = t; autor = r.updated_by; quando = r.updated_at; }
         });
         const cfg = (cfgRows || [])[0];
-        if (cfg) { limite = Number(cfg.budget_limit) || limite; if (cfg.fx) fx = cfg.fx; }
+        if (cfg) {
+          limite = Number(cfg.budget_limit) || limite;
+          if (cfg.fx) fx = cfg.fx;
+          if (cfg.nacional !== undefined) nacional = cfg.nacional;
+        }
         online = true;
       } catch (e) {
         console.warn('[capa] sem conexão com o banco:', e.message);
       }
     }
-    return { eventos, plan, fx, limite, autor, quando, online };
+    return { eventos, plan, fx, limite, nacional, autor, quando, online };
   }
 
   function render(d) {
     const t = Custo.plano(d.eventos, d.plan, d.fx);
-    const pct = d.limite > 0 ? (t.total / d.limite) * 100 : 0;
-    const acima = d.limite > 0 && t.total > d.limite;
+    const n = Custo.nacional(d.nacional);
+    // A manchete é o orçamento de viagem inteiro. Mostrar só a metade
+    // internacional aqui e o total na ferramenta era a divergência clássica.
+    const geral = t.total + n.total;
+    const pct = d.limite > 0 ? (geral / d.limite) * 100 : 0;
+    const acima = d.limite > 0 && geral > d.limite;
 
     const heroNum = document.getElementById('heroNumero');
     const heroSub = document.getElementById('heroSub');
 
-    if (t.eventos === 0) {
+    if (t.eventos === 0 && n.total <= 0) {
       // Sem plano montado, o número seria zero e não diria nada.
       heroNum.innerHTML = `${d.eventos.length}<span class="hero-unidade">eventos mapeados</span>`;
       heroSub.textContent = 'O plano de 2027 ainda não foi montado. '
         + 'Abra o orçamento para escolher os eventos e ver o consolidado.';
       document.getElementById('heroBarra').style.display = 'none';
     } else {
-      heroNum.innerHTML = brlBig(t.total);
-      heroSub.innerHTML = `${plural(t.eventos, 'evento', 'eventos')} · `
-        + `${plural(t.pessoas, 'participação', 'participações')} · `
-        + `${plural(t.cidades.size, 'praça', 'praças')} em `
-        + `${t.regioes.size === 1 ? '1 região' : t.regioes.size + ' regiões'}`;
+      heroNum.innerHTML = brlBig(geral);
+      // Montado por partes: com o plano internacional ainda vazio, "0 eventos ·
+      // 0 participações · 0 praças em 0 regiões" não informa nada.
+      const partes = [];
+      if (t.eventos > 0) {
+        partes.push(plural(t.eventos, 'evento', 'eventos'));
+        partes.push(plural(t.pessoas, 'participação', 'participações'));
+        partes.push(plural(t.cidades.size, 'praça', 'praças') + ' em '
+          + (t.regioes.size === 1 ? '1 região' : t.regioes.size + ' regiões'));
+      }
+      if (n.total > 0) {
+        partes.push(plural(n.viagens, 'viagem nacional', 'viagens nacionais')
+          + ' a ' + plural(n.polos.length, 'polo', 'polos'));
+      }
+      heroSub.innerHTML = partes.join(' · ');
       document.getElementById('heroBarraFill').style.width = Math.min(pct, 100).toFixed(1) + '%';
       document.getElementById('heroBarraFill').className = 'hero-barra-fill' + (acima ? ' over' : '');
       document.getElementById('heroBarraTxt').textContent = acima
-        ? `${Math.round(pct)}% do limite de ${brl(d.limite)} — ${brl(t.total - d.limite)} acima`
-        : `${Math.round(pct)}% do limite de ${brl(d.limite)} · ${brl(d.limite - t.total)} disponíveis`;
+        ? `${Math.round(pct)}% do limite de ${brl(d.limite)} — ${brl(geral - d.limite)} acima`
+        : `${Math.round(pct)}% do limite de ${brl(d.limite)} · ${brl(d.limite - geral)} disponíveis`;
     }
 
     /* números de apoio */
@@ -112,6 +131,8 @@ const Capa = (() => {
       ['Eventos no catálogo', d.eventos.length, 'candidatos avaliados'],
       ['Frentes temáticas', new Set(d.eventos.map(e => e.category)).size, 'de API Economy a IA & Dados'],
       ['No plano', t.eventos, t.eventos ? plural(t.pessoas, 'participação', 'participações') : 'nada selecionado ainda'],
+      ['Viagens nacionais', n.total > 0 ? brl(n.total) : '—',
+        n.total > 0 ? `${n.viagens} viagens a ${n.polos.map(p => p.nome).join(' e ')}` : 'sem política definida'],
       ['Economia com cortesias', t.economia > 0 ? brl(t.economia) : '—',
         t.cortesias ? plural(t.cortesias, 'ingresso garantido', 'ingressos garantidos') : 'nenhuma cortesia marcada'],
     ];

@@ -209,6 +209,39 @@ const EventMap = (() => {
       markerLayer.addLayer(marker);
     });
 
+    /* ─── polos nacionais ───
+       Fora da camada de calor de propósito: o calor mede a concentração de
+       eventos internacionais, e misturar a visita de rotina distorceria a
+       leitura. Aqui eles entram com linguagem visual própria. */
+    const nacional = typeof Custo !== 'undefined'
+      ? Custo.nacional(Store.state.nacional) : { polos: [] };
+    nacional.polos.forEach(p => {
+      if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
+      const ativo = p.viagens > 0;
+      const polo = L.circleMarker([p.lat, p.lng], {
+        radius: ativo ? 7 : 5,
+        color: '#4fc79a',
+        weight: 2,
+        opacity: ativo ? 0.95 : 0.45,
+        fillColor: '#4fc79a',
+        fillOpacity: ativo ? 0.3 : 0.1,
+        dashArray: '3 3',
+      });
+      polo.bindTooltip(
+        `<b>${esc(p.nome)}</b> · polo nacional` +
+        (ativo ? `<br>${p.viagens} viagens/ano · ${brl(p.total)}` : '<br>sem cadência definida'),
+        { direction: 'top', offset: [0, -4], className: 'evt-tip' }
+      );
+      polo.bindPopup(`<div class="evt-popup">
+        <h4>${esc(p.nome)}</h4>
+        <div class="p-meta">Escritório visitado por rotina</div>
+        ${ativo ? `<div class="p-cost">${brl(p.total)} · ${p.viagens} viagens/ano</div>` : ''}
+        <div class="p-meta">${brl(p.custo)} por viagem. A cadência é definida na aba
+          <b>Viagens nacionais</b>.</div>
+      </div>`, { maxWidth: 260, minWidth: 210 });
+      markerLayer.addLayer(polo);
+    });
+
     renderRanking(list, valorDe);
   }
 

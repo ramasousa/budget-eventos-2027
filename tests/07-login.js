@@ -18,6 +18,7 @@ const CFG = A.CONFIG_MOCK;
   });
   const dSetup = await rSetup.json();
   const HA = { ...H, Authorization: 'Bearer ' + dSetup.access_token };
+  await A.semViagensNacionais({ access_token: dSetup.access_token });
 
   const limpeza = await fetch(`${A.API}/rest/v1/eventos2027_plan?event_id=neq.x`,
     { method: 'DELETE', headers: HA });

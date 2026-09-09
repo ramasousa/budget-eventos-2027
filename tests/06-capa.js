@@ -15,6 +15,7 @@ async function autenticar(pg, s) {
 (async () => {
   const SESSAO = await A.sessaoDe();
   const H = { apikey: 'x', Authorization: 'Bearer ' + SESSAO.access_token, 'Content-Type': 'application/json' };
+  await A.semViagensNacionais(SESSAO);
   await fetch(`${A.API}/rest/v1/eventos2027_plan?event_id=neq.x`, { method: 'DELETE', headers: H });
   // eventos personalizados de outras suítes mudariam a contagem do catálogo
   const todos = await (await fetch(`${A.API}/rest/v1/eventos2027_events?select=*`, { headers: H })).json();
@@ -94,7 +95,8 @@ async function autenticar(pg, s) {
   await p2.close();
 
   /* ─── números de apoio ─── */
-  check('quatro cartões de apoio', await p.locator('.capa-num').count() === 4);
+  check('cinco cartões de apoio', await p.locator('.capa-num').count() === 5,
+    'cartões=' + await p.locator('.capa-num').count());
   const cartoes = await p.locator('.capa-num-v').allTextContents();
   check('cartão reflete o catálogo do banco', cartoes[0] === '24', cartoes.join(' | '));
   check('6 frentes temáticas', cartoes[1] === '6', cartoes[1]);
@@ -127,7 +129,8 @@ async function autenticar(pg, s) {
   check('marca volta para a capa', await p.locator('#heroNumero').count() === 1, p.url());
 
   /* ─── seções ─── */
-  check('quatro cards de leitura', await p.locator('.capa-card').count() === 4);
+  check('cinco cards de leitura', await p.locator('.capa-card').count() === 5,
+    'cards=' + await p.locator('.capa-card').count());
   check('quatro premissas', await p.locator('.premissa').count() === 4);
 
   check('nenhuma requisição externa', externas.length === 0, JSON.stringify(externas.slice(0, 3)));

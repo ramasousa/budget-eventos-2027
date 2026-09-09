@@ -15,6 +15,7 @@ async function autenticar(pg, s) {
 (async () => {
   const SESSAO = await A.sessaoDe();
   const H = { apikey: 'x', Authorization: 'Bearer ' + SESSAO.access_token };
+  await A.semViagensNacionais(SESSAO);
   // premissas padrão: a prévia de custo depende do câmbio vigente
   await fetch(`${A.API}/rest/v1/eventos2027_settings?on_conflict=id`, {
     method: 'POST',

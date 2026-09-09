@@ -297,9 +297,10 @@ function renderConsolidado() {
   const sel = selectedEvents();
   const limit = Store.state.budgetLimit;
 
-  if (!sel.length) {
+  const n = nac();
+  if (!sel.length && n.total <= 0) {
     host.innerHTML = `<div class="empty-note">
-      Nenhum evento selecionado ainda.<br>
+      Nenhum evento selecionado e nenhuma viagem nacional prevista.<br>
       Escolha no catálogo, no mapa ou no calendário — o consolidado se monta sozinho.</div>`;
     return;
   }
@@ -364,14 +365,15 @@ function renderConsolidado() {
       </div>`;
     }).join('');
 
-  const pct = limit > 0 ? (t.total / limit * 100) : 0;
-  const saldo = limit - t.total;
+  const geral = t.total + n.total;
+  const pct = limit > 0 ? (geral / limit * 100) : 0;
+  const saldo = limit - geral;
 
   host.innerHTML = `
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-k">Investimento total</div>
-        <div class="kpi-v red">${brlBig(t.total)}</div>
-        <div class="kpi-s">${t.events} eventos · ${t.people} participações</div></div>
+        <div class="kpi-v red">${brlBig(geral)}</div>
+        <div class="kpi-s">${brl(t.total)} internacional · ${brl(n.total)} nacional</div></div>
       <div class="kpi"><div class="kpi-k">Limite definido</div>
         <div class="kpi-v">${brlBig(limit)}</div>
         <div class="kpi-s">${pct.toFixed(0)}% comprometido</div></div>
@@ -397,6 +399,15 @@ function renderConsolidado() {
         ${bars(byRegion)}
       </div>
       <div class="block">
+        <div class="block-h"><span class="eyebrow">Internacional × nacional</span></div>
+        ${bars([['Eventos internacionais', t.total], ['Visita aos polos', n.total]].filter(r => r[1] > 0))}
+      </div>
+      ${n.polos.length ? `
+      <div class="block">
+        <div class="block-h"><span class="eyebrow">Visita aos polos</span></div>
+        ${bars(n.polos.map(p => [`${p.nome} — ${p.viagens} ${plural(p.viagens, 'viagem', 'viagens')}`, p.total]))}
+      </div>` : ''}
+      <div class="block">
         <div class="block-h"><span class="eyebrow">Distribuição no ano</span></div>
         ${bars(byQuarter)}
       </div>
@@ -419,6 +430,7 @@ function renderConsolidado() {
         <li><b>Ingressos de cortesia</b> obtidos com fornecedores zeram a inscrição das pessoas cobertas — as demais rubricas (passagem, hospedagem, diárias, traslado) continuam valendo.</li>
         <li>Cada evento inclui passagem, inscrição, hospedagem, diárias e traslado por pessoa. Não inclui visto, seguro-viagem nem excesso de bagagem.</li>
         <li>Datas e sedes de 2027 marcadas como <b>estimadas</b> ou <b>a confirmar</b> seguem o calendário histórico de cada evento e devem ser revalidadas na abertura das inscrições.</li>
+        <li><b>Viagens nacionais</b> saem de uma política, não de uma lista: ${n.pessoas} ${plural(n.pessoas, 'pessoa', 'pessoas')} × cadência anual por polo × custo fechado da viagem. Ajustável na aba <b>Viagens nacionais</b>.</li>
         <li>Valores sujeitos à política de viagens vigente do banco.</li>
       </ul>
     </div>`;
@@ -432,19 +444,296 @@ function renderConsolidado() {
   });
 }
 
+/* ─── VIAGENS NACIONAIS ───────────────────────────────────────────────────
+   O internacional é uma seleção; o nacional é uma política. Por isso esta
+   tela edita a REGRA (quem, quantas vezes, para onde) e mostra o número que
+   sai dela — em vez de pedir que alguém digite trinta linhas de viagem.
+   ────────────────────────────────────────────────────────────────────────── */
+const nac = () => Custo.nacional(Store.state.nacional);
+
+/* O número do orçamento. Ninguém deve somar as duas metades na mão. */
+function totalGeral() { return totals().total + nac().total; }
+
+const ui_nac = { novoPolo: false, novoCargo: false, cidade: null };
+
+function renderNacional() {
+  // O polling remonta a tela a cada 12s. Se alguém está digitando uma
+  // cadência — ou o nome de um polo novo — remontar apaga o que foi digitado.
+  // Quem tem o foco aqui manda; o render volta no blur, que é quando o valor
+  // é gravado de qualquer forma.
+  const vw = document.getElementById('view-nacional');
+  if (vw && vw.contains(document.activeElement) && document.activeElement !== document.body) return;
+
+  const n = nac();
+  const grid = document.getElementById('polosGrid');
+  const podeEditar = Store.podeEscrever ? !document.body.classList.contains('somente-leitura') : true;
+
+  /* ─── polos ─── */
+  grid.innerHTML = n.polos.map(p => `
+    <div class="polo-card" data-polo="${esc(p.id)}">
+      <div class="polo-top">
+        <div>
+          <div class="polo-nome">${esc(p.nome)}</div>
+          <div class="polo-uf">${esc(p.uf || 'Brasil')}${p.lat == null ? ' · sem coordenada' : ''}</div>
+        </div>
+        <button class="polo-x" data-rm-polo="${esc(p.id)}" title="Remover polo" aria-label="Remover ${esc(p.nome)}">✕</button>
+      </div>
+      <div class="polo-custo">
+        <label class="polo-k" for="custo-${esc(p.id)}">Custo por viagem</label>
+        <div class="polo-input-wrap">
+          <span class="rail-prefix">R$</span>
+          <input type="text" class="polo-input" id="custo-${esc(p.id)}" inputmode="numeric"
+                 data-custo="${esc(p.id)}" value="${Math.round(p.custo).toLocaleString('pt-BR')}">
+        </div>
+      </div>
+      <div class="polo-foot">
+        <span>${p.viagens} ${plural(p.viagens, 'viagem/ano', 'viagens/ano')}</span>
+        <b>${brl(p.total)}</b>
+      </div>
+    </div>`).join('') + (ui_nac.novoPolo ? formNovoPolo() : '');
+
+  if (!n.polos.length && !ui_nac.novoPolo) {
+    grid.innerHTML = `<div class="empty-note">Nenhum polo cadastrado.
+      Use <b>+ Polo</b> para incluir um escritório visitado com frequência.</div>`;
+  }
+
+  /* ─── matriz cargo × polo ─── */
+  const host = document.getElementById('matrizNacional');
+  if (!n.cargos.length && !ui_nac.novoCargo) {
+    host.innerHTML = `<div class="empty-note">Nenhum cargo definido.
+      Use <b>+ Cargo</b> para dizer quem viaja e com que frequência.</div>`;
+  } else {
+    const cols = n.polos.map(p => `<div class="mz-c">${esc(p.nome)}</div>`).join('');
+    const linhas = n.cargos.map(c => `
+      <div class="mz-row" data-cargo="${esc(c.id)}">
+        <div class="mz-nome">${esc(c.nome)}</div>
+        <div class="mz-n">
+          <input type="text" class="mz-input" inputmode="numeric" aria-label="Pessoas em ${esc(c.nome)}"
+                 data-pessoas="${esc(c.id)}" value="${c.pessoas}">
+        </div>
+        ${n.polos.map(p => `
+          <div class="mz-c">
+            <input type="text" class="mz-input" inputmode="numeric"
+                   aria-label="Viagens de ${esc(c.nome)} a ${esc(p.nome)} por ano"
+                   data-viagens="${esc(c.id)}|${esc(p.id)}" value="${c.viagens[p.id] || 0}">
+          </div>`).join('')}
+        <div class="mz-total">${brl(c.total)}</div>
+        <button class="mz-x" data-rm-cargo="${esc(c.id)}" title="Remover cargo" aria-label="Remover ${esc(c.nome)}">✕</button>
+      </div>`).join('');
+
+    host.innerHTML = `
+      <div class="mz-head">
+        <div class="mz-nome">Cargo</div>
+        <div class="mz-n">Pessoas</div>
+        ${cols}
+        <div class="mz-total">No ano</div>
+        <div class="mz-x-sp"></div>
+      </div>
+      ${linhas}
+      ${ui_nac.novoCargo ? formNovoCargo(n.polos.length) : ''}
+      <div class="mz-foot">
+        <div class="mz-nome">Total</div>
+        <div class="mz-n">${n.pessoas}</div>
+        ${n.polos.map(p => `<div class="mz-c">${p.viagens}</div>`).join('')}
+        <div class="mz-total">${brl(n.total)}</div>
+        <div class="mz-x-sp"></div>
+      </div>`;
+    // repeat(0, …) é inválido e derruba o grid-template inteiro: sem polo
+    // nenhum, a matriz reserva uma coluna vazia em vez de desmontar.
+    host.style.setProperty('--mz-polos', Math.max(1, n.polos.length));
+  }
+
+  /* ─── resumo ─── */
+  const resumo = document.getElementById('nacResumo');
+  const t = totals();
+  const geral = t.total + n.total;
+  const fatia = geral > 0 ? (n.total / geral) * 100 : 0;
+  resumo.innerHTML = `
+    <div class="nac-linha">
+      <span class="eyebrow">O que isso significa</span>
+      <p>
+        ${n.pessoas} ${plural(n.pessoas, 'pessoa', 'pessoas')} em
+        ${n.cargos.length} ${plural(n.cargos.length, 'cargo', 'cargos')} somam
+        <b>${n.viagens} ${plural(n.viagens, 'viagem', 'viagens')}</b> por ano a
+        ${n.polos.length} ${plural(n.polos.length, 'polo', 'polos')} —
+        <b>${brl(n.total)}</b>, ou <b>${fatia.toFixed(0)}%</b> do orçamento total de viagem
+        (${brl(geral)} somando os eventos internacionais).
+      </p>
+    </div>`;
+
+  if (!podeEditar) {
+    document.querySelectorAll('#view-nacional input, #view-nacional button')
+      .forEach(el => { el.disabled = true; });
+  }
+  ligarNacional();
+  const badge = document.getElementById('tabCountNacional');
+  badge.textContent = n.viagens;
+  badge.style.display = n.viagens ? '' : 'none';
+}
+
+function formNovoPolo() {
+  return `
+    <div class="polo-card novo" id="formPolo">
+      <div class="polo-nome">Novo polo</div>
+      <label class="polo-k" for="poloCidade">Cidade</label>
+      <div class="polo-ac">
+        <input type="text" class="polo-input full" id="poloCidade" autocomplete="off"
+               placeholder="Digite e escolha na lista">
+        <div class="ac-lista" id="poloLista"></div>
+      </div>
+      <label class="polo-k" for="poloCusto">Custo por viagem (R$)</label>
+      <input type="text" class="polo-input full" id="poloCusto" inputmode="numeric" value="2.000">
+      <div class="polo-acoes">
+        <button class="ghost-btn primary" id="btnSalvarPolo">Incluir</button>
+        <button class="ghost-btn" id="btnCancelarPolo">Cancelar</button>
+      </div>
+      <div class="polo-nota" id="poloNota"></div>
+    </div>`;
+}
+
+function formNovoCargo(qtdPolos) {
+  return `
+    <div class="mz-row novo" id="formCargo">
+      <div class="mz-nome"><input type="text" class="mz-input full" id="cargoNome" placeholder="Nome do cargo"></div>
+      <div class="mz-n"><input type="text" class="mz-input" id="cargoPessoas" inputmode="numeric" value="1" aria-label="Pessoas"></div>
+      ${Array.from({ length: qtdPolos }, () => '<div class="mz-c">—</div>').join('')}
+      <div class="mz-total">
+        <button class="ghost-btn primary" id="btnSalvarCargo">Incluir</button>
+      </div>
+      <button class="mz-x" id="btnCancelarCargo" title="Cancelar">✕</button>
+    </div>`;
+}
+
+/* Cadência entra zerada: o cargo é criado e a política se preenche na matriz. */
+function ligarNacional() {
+  const num = el => parseNum(el.value);
+
+  document.querySelectorAll('[data-custo]').forEach(el => {
+    el.onchange = () => Store.setPoloCusto(el.dataset.custo, num(el));
+    el.onkeydown = e => { if (e.key === 'Enter') el.blur(); };
+  });
+  document.querySelectorAll('[data-pessoas]').forEach(el => {
+    el.onchange = () => Store.setCargoPessoas(el.dataset.pessoas, num(el));
+    el.onkeydown = e => { if (e.key === 'Enter') el.blur(); };
+  });
+  document.querySelectorAll('[data-viagens]').forEach(el => {
+    el.onchange = () => {
+      const [cargo, polo] = el.dataset.viagens.split('|');
+      Store.setViagens(cargo, polo, num(el));
+    };
+    el.onkeydown = e => { if (e.key === 'Enter') el.blur(); };
+  });
+  document.querySelectorAll('[data-rm-polo]').forEach(b => {
+    b.onclick = () => {
+      const p = nac().polos.find(x => x.id === b.dataset.rmPolo);
+      if (!p) return;
+      if (!confirm(`Remover ${p.nome} do orçamento? A cadência de todos os cargos para esse polo é perdida.`)) return;
+      if (Store.removerPolo(p.id)) toast(`${p.nome} removido.`);
+    };
+  });
+  document.querySelectorAll('[data-rm-cargo]').forEach(b => {
+    b.onclick = () => {
+      const c = nac().cargos.find(x => x.id === b.dataset.rmCargo);
+      if (!c) return;
+      if (!confirm(`Remover o cargo ${c.nome}? ${brl(c.total)} saem do orçamento.`)) return;
+      if (Store.removerCargo(c.id)) toast(`${c.nome} removido.`);
+    };
+  });
+
+  const btnPolo = document.getElementById('btnNovoPolo');
+  if (btnPolo) btnPolo.onclick = () => { ui_nac.novoPolo = true; ui_nac.cidade = null; renderNacional();
+    const c = document.getElementById('poloCidade'); if (c) c.focus(); };
+  const btnCargo = document.getElementById('btnNovoCargo');
+  if (btnCargo) btnCargo.onclick = () => { ui_nac.novoCargo = true; renderNacional();
+    const c = document.getElementById('cargoNome'); if (c) c.focus(); };
+
+  const cancPolo = document.getElementById('btnCancelarPolo');
+  if (cancPolo) cancPolo.onclick = () => { ui_nac.novoPolo = false; renderNacional(); };
+  const cancCargo = document.getElementById('btnCancelarCargo');
+  if (cancCargo) cancCargo.onclick = () => { ui_nac.novoCargo = false; renderNacional(); };
+
+  const salvarCargo = document.getElementById('btnSalvarCargo');
+  if (salvarCargo) salvarCargo.onclick = () => {
+    const nome = document.getElementById('cargoNome').value.trim();
+    if (!nome) return toast('Dê um nome ao cargo.', true);
+    const pessoas = parseNum(document.getElementById('cargoPessoas').value);
+    ui_nac.novoCargo = false;
+    if (Store.criarCargo(nome, pessoas)) toast(`${nome} incluído. Defina a cadência na matriz.`);
+    renderNacional();
+  };
+
+  ligarCidadePolo();
+}
+
+/* Reaproveita a base de cidades do formulário de evento: escolher na lista
+   traz a coordenada, e o polo já nasce posicionado no mapa. */
+function ligarCidadePolo() {
+  const campo = document.getElementById('poloCidade');
+  if (!campo) return;
+  const lista = document.getElementById('poloLista');
+  const nota = document.getElementById('poloNota');
+
+  Cidades.carregar().catch(() => {
+    if (nota) nota.textContent = 'Base de cidades indisponível — o polo entra sem coordenada e não aparece no mapa.';
+  });
+
+  const fechar = () => { lista.classList.remove('open'); lista.innerHTML = ''; };
+
+  campo.oninput = () => {
+    const achados = Cidades.buscar(campo.value, 6).filter(c => /Brasil|Brazil/i.test(c.pais));
+    if (!campo.value.trim() || !achados.length) return fechar();
+    lista.classList.add('open');
+    lista.innerHTML = achados.map((c, i) => `
+      <button type="button" class="ac-item" data-i="${i}">
+        <span class="ac-cidade">${esc(c.nome)}</span>
+        <span class="ac-pais">${esc(c.pais)}</span>
+      </button>`).join('');
+    lista.querySelectorAll('.ac-item').forEach(b => {
+      b.onclick = () => {
+        ui_nac.cidade = achados[+b.dataset.i];
+        campo.value = ui_nac.cidade.nome;
+        nota.textContent = `${ui_nac.cidade.nome} · ${ui_nac.cidade.lat.toFixed(2)}, ${ui_nac.cidade.lng.toFixed(2)}`;
+        fechar();
+      };
+    });
+  };
+  campo.onblur = () => setTimeout(fechar, 160);
+
+  document.getElementById('btnSalvarPolo').onclick = () => {
+    const nome = (ui_nac.cidade && ui_nac.cidade.nome) || campo.value.trim();
+    if (!nome) return toast('Escolha a cidade do polo.', true);
+    const custo = parseNum(document.getElementById('poloCusto').value);
+    ui_nac.novoPolo = false;
+    const ok = Store.criarPolo({
+      nome, uf: 'Brasil',
+      lat: ui_nac.cidade ? ui_nac.cidade.lat : null,
+      lng: ui_nac.cidade ? ui_nac.cidade.lng : null,
+      custo,
+    });
+    ui_nac.cidade = null;
+    if (ok) toast(`${nome} incluído. Defina a cadência de cada cargo.`);
+    renderNacional();
+  };
+}
+
 /* ─── RAIL ───────────────────────────────────────────────────────────────── */
 function renderRail() {
   const t = totals();
+  const n = nac();
+  // O limite é do orçamento de viagem inteiro, não só da metade internacional.
+  const geral = t.total + n.total;
   const limit = Store.state.budgetLimit;
 
-  document.getElementById('railTotal').innerHTML = brlBig(t.total);
+  document.getElementById('railTotal').innerHTML = brlBig(geral);
+  document.getElementById('railIntl').textContent = brl(t.total);
+  document.getElementById('railNac').textContent = brl(n.total);
   document.getElementById('railEvents').textContent = t.events;
   document.getElementById('railPeople').textContent = t.people;
   document.getElementById('railPassagens').textContent = brl(t.passagens);
   document.getElementById('railEconomia').textContent = brl(t.economia);
 
-  const pct = limit > 0 ? (t.total / limit) * 100 : 0;
-  const over = limit > 0 && t.total > limit;
+  const pct = limit > 0 ? (geral / limit) * 100 : 0;
+  const over = limit > 0 && geral > limit;
   const warn = !over && pct >= 85;
 
   const bar = document.getElementById('railBar');
@@ -456,17 +745,32 @@ function renderRail() {
   pctEl.className = 'bar-pct' + (over ? ' over' : '');
   pctEl.textContent = limit > 0
     ? (over
-      ? `${Math.round(pct)}% — ${brl(t.total - limit)} acima do limite`
-      : `${Math.round(pct)}% do limite · ${brl(limit - t.total)} disponíveis`)
+      ? `${Math.round(pct)}% — ${brl(geral - limit)} acima do limite`
+      : `${Math.round(pct)}% do limite · ${brl(limit - geral)} disponíveis`)
     : 'Defina um limite acima';
 
   const list = document.getElementById('railList');
   const sel = selectedEvents().sort((a, b) => a.ev.monthNum - b.ev.monthNum);
+
+  // A viagem nacional não é um item selecionável, mas está no total: se não
+  // aparecesse aqui, a lista não explicaria o número acima dela.
+  const itemNac = n.total > 0 ? `
+    <div class="sel-item nac">
+      <div class="sel-top">
+        <div class="sel-name">Viagens nacionais</div>
+        <div class="sel-total">${brl(n.total)}</div>
+      </div>
+      <div class="sel-meta">
+        <span>${n.polos.map(p => esc(p.nome)).join(' · ')} · ${n.viagens} ${plural(n.viagens, 'viagem', 'viagens')}</span>
+        <button class="sel-ir" data-ir="nacional">Ver política</button>
+      </div>
+    </div>` : '';
+
   if (!sel.length) {
-    list.innerHTML = `<div class="rail-empty">
-      <p>Nenhum evento selecionado.<br>Escolha no catálogo, no mapa<br>ou no calendário.</p></div>`;
+    list.innerHTML = itemNac + `<div class="rail-empty">
+      <p>Nenhum evento internacional selecionado.<br>Escolha no catálogo, no mapa<br>ou no calendário.</p></div>`;
   } else {
-    list.innerHTML = sel.map(({ ev, people, courtesy }) => `
+    list.innerHTML = itemNac + sel.map(({ ev, people, courtesy }) => `
       <div class="sel-item">
         <div class="sel-top">
           <div class="sel-name">${esc(ev.name)}</div>
@@ -481,6 +785,8 @@ function renderRail() {
     list.querySelectorAll('[data-rm]').forEach(b =>
       b.onclick = () => Store.toggle(b.dataset.rm));
   }
+  list.querySelectorAll('[data-ir]').forEach(b =>
+    b.onclick = () => switchTab(b.dataset.ir));
 
   const budgetInput = document.getElementById('budgetInput');
   if (document.activeElement !== budgetInput) {
@@ -523,6 +829,7 @@ function render() {
   renderFilters();
   renderCatalog();
   renderTimeline();
+  renderNacional();
   renderConsolidado();
   renderRail();
   renderStatus();
@@ -562,7 +869,8 @@ function download(filename, content, mime) {
 
 function exportCSV() {
   const sel = selectedEvents();
-  if (!sel.length) return toast('Selecione ao menos um evento.', true);
+  const n = nac();
+  if (!sel.length && n.total <= 0) return toast('Nada a exportar ainda.', true);
   const head = ['Evento', 'Categoria', 'Cidade', 'País', 'Região', 'Mês', 'Pessoas',
     'Ingressos cortesia', 'Economia cortesia', 'Passagens', 'Inscrições', 'Hospedagem',
     'Diárias', 'Traslados', 'Total', 'Prioridade', 'Confiança da data'];
@@ -578,19 +886,43 @@ function exportCSV() {
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';');
   });
   const t = totals();
+  const asp = v => `"${String(v).replace(/"/g, '""')}"`;
+
+  // Sem viagem nacional não há duas metades a separar: um subtotal idêntico
+  // ao total logo abaixo dele só atrapalha quem lê a planilha.
+  if (n.total > 0) {
+    lines.push(['SUBTOTAL INTERNACIONAL', '', '', '', '', '', t.people, t.courtesy, Math.round(t.economia),
+      Math.round(t.passagens), Math.round(t.inscricoes), Math.round(t.hospedagem),
+      Math.round(t.perdiem), Math.round(t.traslado), Math.round(t.total), '', ''].map(asp).join(';'));
+
+    // Uma linha por cargo e polo: quem lê a planilha precisa enxergar a regra,
+    // não só o total que ela produz.
+    n.cargos.forEach(c => n.polos.forEach(p => {
+      const viagens = c.pessoas * (c.viagens[p.id] || 0);
+      if (!viagens) return;
+      lines.push([`Visita a ${p.nome} — ${c.nome}`, 'Viagem nacional', p.nome, 'Brasil', 'Brasil',
+        'Ano', c.pessoas, 0, 0, Math.round(viagens * p.custo), 0, 0, 0, 0,
+        Math.round(viagens * p.custo), '', `${c.viagens[p.id]}x/ano por pessoa`].map(asp).join(';'));
+    }));
+
+    lines.push(['SUBTOTAL NACIONAL', '', '', '', '', '', n.pessoas, 0, 0,
+      Math.round(n.total), 0, 0, 0, 0, Math.round(n.total), '', ''].map(asp).join(';'));
+  }
+
   lines.push(['TOTAL GERAL', '', '', '', '', '', t.people, t.courtesy, Math.round(t.economia),
-    Math.round(t.passagens), Math.round(t.inscricoes), Math.round(t.hospedagem),
-    Math.round(t.perdiem), Math.round(t.traslado), Math.round(t.total), '', '']
-    .map(v => `"${v}"`).join(';'));
-  download('orcamento-eventos-2027.csv',
+    Math.round(t.passagens + n.total), Math.round(t.inscricoes), Math.round(t.hospedagem),
+    Math.round(t.perdiem), Math.round(t.traslado), Math.round(t.total + n.total), '', ''].map(asp).join(';'));
+  download('orcamento-viagens-2027.csv',
     [head.map(h => `"${h}"`).join(';')].concat(lines).join('\n'), 'text/csv');
   toast('CSV exportado.');
 }
 
 function exportTXT() {
   const sel = selectedEvents();
-  if (!sel.length) return toast('Selecione ao menos um evento.', true);
+  const n = nac();
+  if (!sel.length && n.total <= 0) return toast('Nada a exportar ainda.', true);
   const t = totals();
+  const geral = t.total + n.total;
   const limit = Store.state.budgetLimit;
   const line = '─'.repeat(72);
   const rows = sel.sort((a, b) => a.ev.monthNum - b.ev.monthNum).map(({ ev, people, courtesy }) => {
@@ -603,20 +935,29 @@ function exportTXT() {
   }).join('\n');
 
   const txt =
-`ORÇAMENTO DE EVENTOS INTERNACIONAIS — 2027
+`ORÇAMENTO DE VIAGENS — 2027
 Open Platform & BaaS · BU AI First — Banco Bradesco
 Gerado em ${new Date().toLocaleDateString('pt-BR')} por ${Store.author()}
 ${line}
 
 ${rows}
 ${line}
-TOTAL ESTIMADO ......... ${brl(t.total)}
+${n.polos.length ? `VIAGENS NACIONAIS — política de visita aos polos
+${n.cargos.map(c => `  ${c.nome} (${c.pessoas}p): ` +
+    n.polos.map(p => `${p.nome} ${c.viagens[p.id] || 0}x`).join(' · ') +
+    ` → ${brl(c.total)}`).join('\n')}
+${n.polos.map(p => `  ${p.nome.padEnd(20, '.')} ${String(p.viagens).padStart(3)} viagens × ${brl(p.custo)} = ${brl(p.total)}`).join('\n')}
+  SUBTOTAL NACIONAL ...... ${brl(n.total)}
+${line}` : ''}
+${n.total > 0 ? `INTERNACIONAL .......... ${brl(t.total)}
+NACIONAL ............... ${brl(n.total)}
+` : ''}TOTAL ESTIMADO ......... ${brl(geral)}
 LIMITE DEFINIDO ........ ${brl(limit)}
-${limit > 0 ? (t.total > limit
-  ? `EXCEDENTE .............. ${brl(t.total - limit)}  (${Math.round(t.total / limit * 100)}% do limite)`
-  : `SALDO DISPONÍVEL ....... ${brl(limit - t.total)}  (${Math.round(t.total / limit * 100)}% do limite)`) : ''}
+${limit > 0 ? (geral > limit
+  ? `EXCEDENTE .............. ${brl(geral - limit)}  (${Math.round(geral / limit * 100)}% do limite)`
+  : `SALDO DISPONÍVEL ....... ${brl(limit - geral)}  (${Math.round(geral / limit * 100)}% do limite)`) : ''}
 
-COMPOSIÇÃO
+COMPOSIÇÃO (internacional)
   Passagens ............ ${brl(t.passagens)}
   Inscrições ........... ${brl(t.inscricoes)}
   Hospedagem ........... ${brl(t.hospedagem)}
@@ -635,7 +976,7 @@ PREMISSAS
   Datas de 2027 estimadas pelo calendário histórico; revalidar na abertura das inscrições.
   Valores sujeitos à política de viagens vigente.
 `;
-  download('orcamento-eventos-2027.txt', txt, 'text/plain');
+  download('orcamento-viagens-2027.txt', txt, 'text/plain');
   toast('Resumo exportado.');
 }
 

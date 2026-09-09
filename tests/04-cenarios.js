@@ -15,6 +15,7 @@ async function autenticar(pg, s) {
 (async () => {
   const SESSAO = await A.sessaoDe();
   const H = { apikey: 'x', Authorization: 'Bearer ' + SESSAO.access_token };
+  await A.semViagensNacionais(SESSAO);
   await fetch(`${A.API}/rest/v1/eventos2027_plan?event_id=neq.x`, { method: 'DELETE', headers: H });
   await fetch(`${A.API}/rest/v1/eventos2027_scenarios?id=neq.x`, { method: 'DELETE', headers: H });
 

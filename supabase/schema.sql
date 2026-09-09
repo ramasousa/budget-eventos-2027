@@ -82,10 +82,16 @@ create table if not exists eventos2027_settings (
   id            int primary key default 1,
   budget_limit  numeric not null default 300000,
   fx            jsonb   not null default '{"USD":6.20,"EUR":6.70,"GBP":7.90}'::jsonb,
+  -- Política de visita aos polos nacionais. Mora aqui, e não em tabelas
+  -- próprias, porque é configuração singleton de meia dúzia de linhas: assim
+  -- herda leitura, escrita, espelho local e RLS que já existem.
+  nacional      jsonb   not null default '{"polos":[],"cargos":[]}'::jsonb,
   updated_by    text,
   updated_at    timestamptz not null default now(),
   constraint eventos2027_settings_singleton check (id = 1)
 );
+alter table eventos2027_settings
+  add column if not exists nacional jsonb not null default '{"polos":[],"cargos":[]}'::jsonb;
 
 -- ─── Cenários salvos (snapshots nomeados para comparação) ──────────────────
 create table if not exists eventos2027_scenarios (
@@ -95,11 +101,13 @@ create table if not exists eventos2027_scenarios (
   selections    jsonb not null,
   budget_limit  numeric,
   fx            jsonb,
+  nacional      jsonb,
   total         numeric,
   created_at    timestamptz not null default now()
 );
 create index if not exists eventos2027_scenarios_created_idx
   on eventos2027_scenarios (created_at desc);
+alter table eventos2027_scenarios add column if not exists nacional jsonb;
 
 -- ─── RLS: leitura e escrita abertas para anon (modelo escolhido) ───────────
 alter table eventos2027_events    enable row level security;
@@ -126,6 +134,26 @@ insert into eventos2027_settings (id, budget_limit, updated_by)
 values (1, 300000, 'setup')
 on conflict (id) do nothing;
 
+-- Polos nacionais: Recife e Curitiba, cadência por cargo. Só semeia se ainda
+-- estiver vazio — reaplicar o schema não desfaz o que a equipe ajustou.
+update eventos2027_settings
+   set nacional = jsonb_build_object(
+     'polos', jsonb_build_array(
+       jsonb_build_object('id','recife','nome','Recife','uf','PE',
+                          'lat',-8.0476,'lng',-34.8770,'custo',2000),
+       jsonb_build_object('id','curitiba','nome','Curitiba','uf','PR',
+                          'lat',-25.4284,'lng',-49.2733,'custo',2000)
+     ),
+     'cargos', jsonb_build_array(
+       jsonb_build_object('id','gerente-senior','nome','Gerente Sênior','pessoas',1,
+                          'viagens', jsonb_build_object('recife',4,'curitiba',4)),
+       jsonb_build_object('id','gerente','nome','Gerente','pessoas',2,
+                          'viagens', jsonb_build_object('recife',2,'curitiba',2))
+     )
+   )
+ where id = 1
+   and coalesce(jsonb_array_length(nacional -> 'polos'), 0) = 0;
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- REDE DE SEGURANÇA CONTRA APAGAMENTO
 --
@@ -146,15 +174,17 @@ create table if not exists eventos2027_snapshots (
   plano          jsonb not null,
   budget_limit   numeric,
   fx             jsonb,
+  nacional       jsonb,
   eventos        int,
   participacoes  int
 );
+alter table eventos2027_snapshots add column if not exists nacional jsonb;
 create index if not exists eventos2027_snapshots_taken_idx
   on eventos2027_snapshots (taken_at desc);
 
 create or replace function eventos2027_tirar_snapshot(p_motivo text)
 returns void language plpgsql security definer set search_path = public as $$
-declare v_plano jsonb; v_ultimo jsonb; v_limit numeric; v_fx jsonb;
+declare v_plano jsonb; v_ultimo jsonb; v_limit numeric; v_fx jsonb; v_nac jsonb;
 begin
   select coalesce(jsonb_object_agg(event_id,
            jsonb_build_object('people', people, 'courtesy', courtesy)), '{}'::jsonb)
@@ -166,10 +196,11 @@ begin
   select plano into v_ultimo from eventos2027_snapshots order by taken_at desc limit 1;
   if v_ultimo is not null and v_ultimo = v_plano then return; end if;
 
-  select budget_limit, fx into v_limit, v_fx from eventos2027_settings where id = 1;
+  select budget_limit, fx, nacional into v_limit, v_fx, v_nac
+    from eventos2027_settings where id = 1;
 
-  insert into eventos2027_snapshots (motivo, plano, budget_limit, fx, eventos, participacoes)
-  values (p_motivo, v_plano, v_limit, v_fx,
+  insert into eventos2027_snapshots (motivo, plano, budget_limit, fx, nacional, eventos, participacoes)
+  values (p_motivo, v_plano, v_limit, v_fx, v_nac,
           (select count(*) from eventos2027_plan),
           (select coalesce(sum(people), 0) from eventos2027_plan));
 
