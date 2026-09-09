@@ -461,8 +461,11 @@ function renderNacional() {
   // cadência — ou o nome de um polo novo — remontar apaga o que foi digitado.
   // Quem tem o foco aqui manda; o render volta no blur, que é quando o valor
   // é gravado de qualquer forma.
+  const foco = document.activeElement;
   const vw = document.getElementById('view-nacional');
-  if (vw && vw.contains(document.activeElement) && document.activeElement !== document.body) return;
+  // Só CAMPO em foco segura o render. Se qualquer elemento segurasse, o
+  // próprio "+ Cargo" bloquearia a remontagem que desenha o formulário dele.
+  if (vw && foco && foco.tagName === 'INPUT' && vw.contains(foco)) return;
 
   const n = nac();
   const grid = document.getElementById('polosGrid');

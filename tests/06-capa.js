@@ -98,9 +98,13 @@ async function autenticar(pg, s) {
   check('cinco cartões de apoio', await p.locator('.capa-num').count() === 5,
     'cartões=' + await p.locator('.capa-num').count());
   const cartoes = await p.locator('.capa-num-v').allTextContents();
-  check('cartão reflete o catálogo do banco', cartoes[0] === '24', cartoes.join(' | '));
-  check('6 frentes temáticas', cartoes[1] === '6', cartoes[1]);
-  check('economia com cortesias no cartão', /7.370/.test(cartoes[3]), cartoes[3]);
+  // Buscados pelo rótulo, não por índice: inserir um cartão no meio não pode
+  // fazer três asserções apontarem para o vizinho errado.
+  const rotulos = await p.locator('.capa-num-k').allTextContents();
+  const cartao = nome => cartoes[rotulos.findIndex(r => new RegExp(nome, 'i').test(r))];
+  check('cartão reflete o catálogo do banco', cartao('catálogo') === '24', cartoes.join(' | '));
+  check('6 frentes temáticas', cartao('frentes') === '6', cartao('frentes'));
+  check('economia com cortesias no cartão', /7.370/.test(cartao('cortesias')), cartao('cortesias'));
 
   /* ─── estado ─── */
   const estado = await p.locator('#capaEstado').textContent();
